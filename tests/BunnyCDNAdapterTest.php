@@ -27,13 +27,18 @@ class BunnyCDNAdapterTest extends TestCase
     {
         $mock = Mockery::mock(BunnyCDNStorage::class);
         $mock->shouldReceive('uploadFile')->andReturn('');
+        $mock->shouldReceive('deleteObject')->andReturn('');
         $mock->shouldReceive('downloadFile')->andReturnUsing(static function($path, $localPath) {
             $file = fopen($localPath, 'w+');
             fwrite($file, self::FILE_CONTENTS);
             return true;
         });
         $mock->shouldReceive('getStorageObjects')->andReturn([
-            $this->getExampleFile('test')
+            $this->getExampleFile('directory', true),
+            $this->getExampleFile('directory/nested_file123.txt'),
+            $this->getExampleFile('test123.txt'),
+            $this->getExampleFile('test456.txt'),
+            $this->getExampleFile('test789.txt')
         ]);
         $mock->storageZoneName = $storageZoneName;
         $mock->apiAccessKey = $apiAccessKey;
@@ -66,9 +71,7 @@ class BunnyCDNAdapterTest extends TestCase
 
     public function testWrite()
     {
-        /** @var BunnyCDNStorage $mockBCDN */
-        $mockBCDN = $this->getBunnyCDNMockObject();
-        $adapter = new BunnyCDNAdapter($mockBCDN);
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue(
             $adapter->write('testing/test.txt', 'Testing.txt', new Config())
         );
@@ -76,14 +79,55 @@ class BunnyCDNAdapterTest extends TestCase
 
     public function testHas()
     {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->has('test123.txt'));
+    }
 
+    public function testHas_Directory()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->has('directory'));
+    }
+
+    public function testHas_Directory_Nested()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->has('directory/nested_file123.txt'));
+    }
+
+    public function testHas_Slash_Prefix()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->has('/test123.txt'));
+    }
+
+    public function testHas_Double_Slash_Prefix()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->has('//test123.txt'));
+    }
+
+    public function testHas_Inverse()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertFalse($adapter->has('/not_in_test_files.txt'));
+    }
+
+    public function testHas_Inverse_Directory()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertFalse($adapter->has('not_a_directory'));
+    }
+
+    public function testHas_Inverse_Directory_Nested()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertFalse($adapter->has('not_a_directory/nested_file123.txt'));
     }
 
     public function testRead()
     {
-        /** @var BunnyCDNStorage $mockBCDN */
-        $mockBCDN = $this->getBunnyCDNMockObject();
-        $adapter = new BunnyCDNAdapter($mockBCDN);
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertEquals(
             $adapter->read('testing/test.txt'),
             self::FILE_CONTENTS
@@ -92,60 +136,70 @@ class BunnyCDNAdapterTest extends TestCase
 
     public function testDelete()
     {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->delete('nested_file123.txt'));
     }
 
     public function testDeleteDir()
     {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->delete('directory'));
     }
 
     public function testCopy()
     {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue(
+            $adapter->copy('directory/test.txt', 'directory/test_copy.txt')
+        );
     }
 
     public function testListContents()
     {
-        /** @var BunnyCDNStorage $mockBCDN */
-        $mockBCDN = $this->getBunnyCDNMockObject('platform-content', '0e273f95-cf35-4881-957ed36fb39f-c82f-457e');
-        $adapter = new BunnyCDNAdapter($mockBCDN);
-        var_dump($adapter->listContents('/'));
-        $this->assertTrue(true);
-    }
-
-    public function testGetMetadata()
-    {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertCount(
+            5, $adapter->listContents('/')
+        );
     }
 
     public function testGetSize()
     {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertIsNumeric(
+            $adapter->getSize('test123.txt')
+        );
     }
 
     public function testRename()
     {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue(
+            $adapter->rename('directory/test.txt', 'directory/test_copy.txt')
+        );
     }
 
     public function testUpdate()
     {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue(
+            $adapter->update('testing/test.txt', 'Testing.txt', new Config())
+        );
     }
 
     public function testCreateDir()
     {
-
-    }
-
-    public function testGetMimetype()
-    {
-
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue(
+            $adapter->createDir('testing/', new Config())
+        );
     }
 
     public function testGetTimestamp()
     {
 
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertIsNumeric(
+            $adapter->getTimestamp('test123.txt')
+        );
     }
 }

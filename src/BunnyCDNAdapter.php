@@ -4,12 +4,14 @@ namespace Sifex\Flysystem\BunnyCDN;
 
 use BunnyCDNStorage;
 use BunnyCDNStorageException;
-use http\Exception\RuntimeException;
 use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use League\Flysystem\Adapter\Polyfill\StreamedCopyTrait;
 use League\Flysystem\Config;
+use League\Flysystem\Exception;
+use League\Flysystem\FileNotFoundException;
 use League\Flysystem\NotSupportedException;
+use League\Flysystem\UnreadableFileException;
 use League\Flysystem\Util;
 
 class BunnyCDNAdapter extends AbstractAdapter
@@ -33,7 +35,6 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
      * @param $path
      * @param $contents
      * @param Config $config
@@ -60,7 +61,10 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @param resource $resource
+     * @param Config $config
+     * @return array|false|void
      */
     public function writeStream($path, $resource, Config $config)
     {
@@ -68,7 +72,10 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @param string $contents
+     * @param Config $config
+     * @return array|bool|false
      */
     public function update($path, $contents, Config $config)
     {
@@ -76,7 +83,10 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @param resource $resource
+     * @param Config $config
+     * @return array|false|void
      */
     public function updateStream($path, $resource, Config $config)
     {
@@ -84,55 +94,87 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @param string $newpath
+     * @return bool
      */
     public function rename($path, $newpath)
     {
-
+        $this->write($newpath, $this->read($path), new Config());
+        return $this->delete($path);
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @param string $newpath
+     * @return bool
      */
     public function copy($path, $newpath)
     {
-        // TODO: Implement copy() method.
+        return $this->write($newpath, $this->read($path), new Config());
+
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @return bool
      */
     public function delete($path)
     {
-        // TODO: Implement delete() method.
+        return !$this->bunnyCDNStorage->deleteObject($path);
     }
 
     /**
-     * @inheritDoc
+     * @param string $dirname
+     * @return bool|void
      */
     public function deleteDir($dirname)
     {
-        // TODO: Implement deleteDir() method.
+        return !$this->bunnyCDNStorage->deleteObject($dirname);
     }
 
     /**
-     * @inheritDoc
+     * @param string $dirname
+     * @param Config $config
+     * @return array|false|void
      */
     public function createDir($dirname, Config $config)
     {
-        // TODO: Implement createDir() method.
+        $temp_pointer = tmpfile();
+        fwrite($temp_pointer, '');
+
+        /** @var string $url */
+        $url = stream_get_meta_data($temp_pointer)['uri'];
+
+        try {
+            $this->bunnyCDNStorage->uploadFile(
+                $url,
+                $this->bunnyCDNStorage->storageZoneName . '/' . $dirname
+            );
+        } catch (BunnyCDNStorageException $e) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @return bool
      */
     public function has($path)
     {
-        // TODO: Implement has() method.
+        return count(array_filter($this->bunnyCDNStorage->getStorageObjects(
+                $this->bunnyCDNStorage->storageZoneName . '/' . $path
+            ), function ($value) use ($path) {
+                return
+                    $value->Path . $value->ObjectName === '/' . $this->normalizePath($this->bunnyCDNStorage->storageZoneName . '/' . $path);
+            }, ARRAY_FILTER_USE_BOTH)) === 1;
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @return array|bool|false|string
      */
     public function read($path)
     {
@@ -151,7 +193,8 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @return array|false|void
      */
     public function readStream($path)
     {
@@ -159,7 +202,9 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
+     * @param string $directory
+     * @param bool $recursive
+     * @return array|mixed
      */
     public function listContents($directory = '', $recursive = false)
     {
@@ -169,34 +214,140 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @inheritDoc
+     * @param $path
+     * @return mixed
+     * @throws UnreadableFileException
+     * @throws FileNotFoundException
+     */
+    private function getIndividualFile($path)
+    {
+        $files = array_filter($this->bunnyCDNStorage->getStorageObjects(
+            $this->bunnyCDNStorage->storageZoneName . '/' . $path
+        ), function ($value) use ($path) {
+            return $value->Path . $value->ObjectName === '/' . $this->normalizePath($this->bunnyCDNStorage->storageZoneName . '/' . $path);
+        }, ARRAY_FILTER_USE_BOTH);
+
+        // Check that the path isn't returning more than one file / folder
+        if (count($files) > 1) {
+            throw new UnreadableFileException('More than one file was returned for path:"' . $path . '", contact package author.');
+        }
+
+        // Check 404
+        if (count($files) === 0) {
+            throw new FileNotFoundException('Could not find file: "' . $path . '".');
+        }
+
+        return array_values($files)[0];
+    }
+
+    /**
+     * @param string $path
+     * @return array|false
      */
     public function getMetadata($path)
     {
-        // TODO: Implement getMetadata() method.
+        try {
+            return get_object_vars($this->getIndividualFile($path));
+        } catch (FileNotFoundException $e) {
+            return false;
+        } catch (UnreadableFileException $e) {
+            return false;
+        }
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @return integer
      */
     public function getSize($path)
     {
-        // TODO: Implement getSize() method.
+        try {
+            return $this->getIndividualFile($path)->Length;
+        } catch (FileNotFoundException $e) {
+            return false;
+        } catch (UnreadableFileException $e) {
+            return false;
+        }
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @return array|false|void
      */
     public function getMimetype($path)
     {
-        // TODO: Implement getMimetype() method.
+        throw new NotSupportedException('BunnyCDN does not provide Mimetype information');
     }
 
     /**
-     * @inheritDoc
+     * @param string $path
+     * @return array|false|void
      */
     public function getTimestamp($path)
     {
-        // TODO: Implement getTimestamp() method.
+        try {
+            return strtotime($this->getIndividualFile($path)->LastChanged);
+        } catch (FileNotFoundException $e) {
+            return false;
+        } catch (UnreadableFileException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * @param $path
+     * @param null $isDirectory
+     * @return false|string|string[]
+     * @throws Exception
+     */
+    private function normalizePath($path, $isDirectory = NULL)
+    {
+        $path = str_replace('\\', '/', $path);
+        if ($isDirectory !== NULL) {
+            if ($isDirectory) {
+                if (!$this->endsWith($path, '/')) {
+                    $path = $path . "/";
+                }
+            } else if ($this->endsWith($path, '/') && $path !== '/') {
+                throw new Exception('The requested path is invalid.');
+            }
+        }
+
+        // Remove double slashes
+        while (strpos($path, '//') !== false) {
+            $path = str_replace('//', '/', $path);
+        }
+
+        // Remove the starting slash
+        if (strpos($path, '/') === 0) {
+            $path = substr($path, 1);
+        }
+
+        return $path;
+    }
+
+    /**
+     * @param $haystack
+     * @param $needle
+     * @return bool
+     */
+    private function startsWith($haystack, $needle)
+    {
+        return (strpos($haystack, $needle) === 0);
+    }
+
+    /**
+     * @param $haystack
+     * @param $needle
+     * @return bool
+     */
+    private function endsWith($haystack, $needle)
+    {
+        $length = strlen($needle);
+        if ($length === 0) {
+            return true;
+        }
+
+        return (substr($haystack, -$length) === $needle);
     }
 }
