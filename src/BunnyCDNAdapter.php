@@ -52,14 +52,17 @@ class BunnyCDNAdapter extends AbstractAdapter
                 $url,
                 $this->bunnyCDNStorage->storageZoneName . '/' . $path
             );
+        // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
 
         return true;
     }
 
     /**
+     * @codeCoverageIgnore
      * @param string $path
      * @param resource $resource
      * @param Config $config
@@ -82,6 +85,7 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
+     * @codeCoverageIgnore
      * @param string $path
      * @param resource $resource
      * @param Config $config
@@ -108,6 +112,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $path
      * @param string $newpath
      * @return bool
+     * @throws Exception
      */
     public function copy($path, $newpath)
     {
@@ -123,9 +128,11 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         try {
             return !$this->bunnyCDNStorage->deleteObject($path);
+        // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -136,9 +143,11 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         try {
             return !$this->bunnyCDNStorage->deleteObject($dirname);
+        // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -159,9 +168,11 @@ class BunnyCDNAdapter extends AbstractAdapter
                 $url,
                 $this->bunnyCDNStorage->storageZoneName . '/' . $dirname
             );
+        // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
 
         return true;
     }
@@ -186,9 +197,11 @@ class BunnyCDNAdapter extends AbstractAdapter
                             $file === null
                         );
                 }, ARRAY_FILTER_USE_BOTH)) === 1;
+        // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -205,14 +218,17 @@ class BunnyCDNAdapter extends AbstractAdapter
                 $this->normalizePath($this->bunnyCDNStorage->storageZoneName . '/' . $path),
                 stream_get_meta_data($temp_pointer)['uri']
             );
+        // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
 
         return file_get_contents(stream_get_meta_data($temp_pointer)['uri']);
     }
 
     /**
+     * @codeCoverageIgnore
      * @param string $path
      * @return array|false|void
      */
@@ -259,12 +275,16 @@ class BunnyCDNAdapter extends AbstractAdapter
 
         // Check that the path isn't returning more than one file / folder
         if (count($files) > 1) {
+            // @codeCoverageIgnoreStart
             throw new UnreadableFileException('More than one file was returned for path:"' . $path . '", contact package author.');
+            // @codeCoverageIgnoreEnd
         }
 
         // Check 404
         if (count($files) === 0) {
+            // @codeCoverageIgnoreStart
             throw new FileNotFoundException('Could not find file: "' . $path . '".');
+            // @codeCoverageIgnoreEnd
         }
 
         return array_values($files)[0];
@@ -279,11 +299,13 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         try {
             return get_object_vars($this->getIndividualFileMetadata($path));
+        // @codeCoverageIgnoreStart
         } catch (FileNotFoundException $e) {
             return false;
         } catch (UnreadableFileException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -295,14 +317,17 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         try {
             return $this->getIndividualFileMetadata($path)->Length;
+        // @codeCoverageIgnoreStart
         } catch (FileNotFoundException $e) {
             return false;
         } catch (UnreadableFileException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
+     * @codeCoverageIgnore
      * @param string $path
      * @return array|false|void
      */
@@ -320,11 +345,13 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         try {
             return strtotime($this->getIndividualFileMetadata($path)->LastChanged);
+        // @codeCoverageIgnoreStart
         } catch (FileNotFoundException $e) {
             return false;
         } catch (UnreadableFileException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -341,9 +368,11 @@ class BunnyCDNAdapter extends AbstractAdapter
                 if (!$this->endsWith($path, '/')) {
                     $path = $path . "/";
                 }
+            // @codeCoverageIgnoreStart
             } else if ($this->endsWith($path, '/') && $path !== '/') {
                 throw new Exception('The requested path is invalid.');
             }
+            // @codeCoverageIgnoreEnd
         }
 
         // Remove double slashes
@@ -360,6 +389,7 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
+     * @codeCoverageIgnore
      * @param $haystack
      * @param $needle
      * @return bool

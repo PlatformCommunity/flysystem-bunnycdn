@@ -150,7 +150,7 @@ class BunnyCDNAdapterTest extends TestCase
     public function testDeleteDir()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        $this->assertTrue($adapter->delete('directory'));
+        $this->assertTrue($adapter->deleteDir('directory'));
     }
 
     public function testCopy()
