@@ -2,9 +2,9 @@
 
 # Flysystem Adapter for BunnyCDN.
 
-## Installation
+[![Build Status](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn.svg?branch=master)](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn)
 
-_TBA_ 
+## Installation
 
 ```bash
 composer require platformcommunity/flysystem-bunnycdn
@@ -13,18 +13,18 @@ composer require platformcommunity/flysystem-bunnycdn
 ## Usage
 
 ```php
-use OpenCloud\OpenStack;
-use OpenCloud\Rackspace;
-use PlatformCommunity\Flysystem\Filesystem;
-use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter as Adapter;
+use BunnyCDN\Storage\BunnyCDNStorage;
+use League\Flysystem\Filesystem;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 
-$client = new BunnyCDNAdapter(Rackspace::UK_IDENTITY_ENDPOINT, array(
-    'username' => ':username',
-    'apiKey' => ':password',
-));
-
-$store = $client->objectStoreService('cloudFiles', 'LON');
-$container = $store->getContainer('flysystem');
-
-$filesystem = new Filesystem(new Adapter($container));
+$client = new BunnyCDNAdapter(new BunnyCDNStorage('storage-zone', 'api-key'));
+$filesystem = new Filesystem($client);
 ```
+
+## Contributing
+
+Pull requests welcome. Please feel free to lodge any issues as discussion points.
+ 
+## Licence
+
+The Flysystem adapter for BunnyCDN is licensed under MIT. 
