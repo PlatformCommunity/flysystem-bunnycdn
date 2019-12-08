@@ -2,7 +2,7 @@
 
 # Flysystem Adapter for BunnyCDN Storage
 
-[![Build Status](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn.svg?branch=master)](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn)
+[![Build Status](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn.svg?branch=master)](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn) ![Codecov](https://img.shields.io/codecov/c/github/PlatformCommunity/flysystem-bunnycdn)
 
 ## Installation
 
