@@ -81,13 +81,19 @@ class BunnyCDNAdapterTest extends TestCase
     public function testHas()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        $this->assertTrue($adapter->has('test123.txt'));
+        $this->assertTrue($adapter->has('directory/nested_file123.txt'));
     }
 
     public function testHas_Directory()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->has('directory'));
+    }
+
+    public function testHas_Directory_Slash()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $this->assertTrue($adapter->has('directory/'));
     }
 
     public function testHas_Directory_Nested()
@@ -183,7 +189,7 @@ class BunnyCDNAdapterTest extends TestCase
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue(
-            $adapter->update('testing/test.txt', 'Testing.txt', new Config())
+            $adapter->update('testing/test.txt', self::FILE_CONTENTS, new Config())
         );
     }
 
@@ -197,10 +203,10 @@ class BunnyCDNAdapterTest extends TestCase
 
     public function testGetTimestamp()
     {
-
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
         $this->assertIsNumeric(
-            $adapter->getTimestamp('test123.txt')
+            $adapter->getTimestamp('directory/nested_file123.txt')
         );
     }
 }
