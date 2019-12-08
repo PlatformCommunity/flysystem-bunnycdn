@@ -2,8 +2,7 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
-
-use BunnyCDNStorageException;
+use BunnyCDN\Storage\BunnyCDNStorage;
 use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use League\Flysystem\Adapter\Polyfill\StreamedCopyTrait;

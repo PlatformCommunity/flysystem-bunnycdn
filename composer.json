@@ -8,25 +8,11 @@
             "email": "alex@platformapp.io"
         }
     ],
-    "repositories": {
-        "bunnycdn-storage": {
-            "type": "package",
-            "package": {
-                "name": "bunnyway/bunnycdn.php.storage",
-                "version": "1.0.0",
-                "source": {
-                    "url": "https://github.com/BunnyWay/BunnyCDN.PHP.Storage",
-                    "type": "git",
-                    "reference": "master"
-                }
-            }
-        }
-    },
     "require": {
-        "php": ">=5.4.0",
+        "php": ">=7.0.0",
         "league/flysystem": "~1.0",
         "guzzlehttp/guzzle": "~6.0",
-        "bunnyway/bunnycdn.php.storage": "*"
+        "platformcommunity/bunnycdn-storage": "dev-master"
     },
     "require-dev": {
         "phpunit/phpunit": "^7.5",
@@ -35,10 +21,7 @@
     "autoload": {
         "psr-4": {
             "PlatformCommunity\\Flysystem\\BunnyCDN\\": "src/"
-        },
-        "classmap": [
-            "vendor/bunnyway/bunnycdn.php.storage/bunnycdn-storage.php"
-        ]
+        }
     },
     "extra": {
         "branch-alias": {

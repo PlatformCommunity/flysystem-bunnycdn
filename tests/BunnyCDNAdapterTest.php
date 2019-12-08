@@ -1,5 +1,6 @@
 <?php
 
+use BunnyCDN\Storage\BunnyCDNStorage;
 use League\Flysystem\Config;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
