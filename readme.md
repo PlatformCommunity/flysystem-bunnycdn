@@ -1,5 +1,6 @@
-# Flysystem Adapter for BunnyCDN.
+<img src="https://pbs.twimg.com/profile_images/1104546807848198144/gG1fM_t-_400x400.png" width="100"/>
 
+# Flysystem Adapter for BunnyCDN.
 
 ## Installation
 

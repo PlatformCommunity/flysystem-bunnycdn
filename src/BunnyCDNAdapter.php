@@ -2,20 +2,61 @@
 
 namespace Sifex\Flysystem\BunnyCDN;
 
+use BunnyCDNStorage;
+use BunnyCDNStorageException;
+use http\Exception\RuntimeException;
 use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use League\Flysystem\Adapter\Polyfill\StreamedCopyTrait;
 use League\Flysystem\Config;
+use League\Flysystem\NotSupportedException;
 use League\Flysystem\Util;
 
 class BunnyCDNAdapter extends AbstractAdapter
 {
+    use NotSupportingVisibilityTrait;
+    use StreamedCopyTrait;
+
+    /**
+     * The BunnyCDN Storage Container
+     * @var BunnyCDNStorage
+     */
+    protected $bunnyCDNStorage;
+
+    /**
+     * BunnyCDNAdapter constructor.
+     * @param BunnyCDNStorage $bunnyCDNStorage
+     */
+    public function __construct(BunnyCDNStorage $bunnyCDNStorage)
+    {
+        $this->bunnyCDNStorage = $bunnyCDNStorage;
+    }
+
     /**
      * @inheritDoc
+     * @param $path
+     * @param $contents
+     * @param Config $config
+     * @return bool
      */
     public function write($path, $contents, Config $config)
     {
-        // TODO: Implement write() method.
+        $temp_pointer = tmpfile();
+        fwrite($temp_pointer, $contents);
+
+        /** @var string $url */
+        $url = stream_get_meta_data($temp_pointer)['uri'];
+
+        try {
+            $this->bunnyCDNStorage->uploadFile(
+                $url,
+                $this->bunnyCDNStorage->storageZoneName . '/' . $path
+            );
+        } catch (BunnyCDNStorageException $e) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -23,7 +64,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function writeStream($path, $resource, Config $config)
     {
-        // TODO: Implement writeStream() method.
+        throw new NotSupportedException('BunnyCDN does not support steam writing, use ->write() instead');
     }
 
     /**
@@ -31,7 +72,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function update($path, $contents, Config $config)
     {
-        // TODO: Implement update() method.
+        return $this->write($path, $contents, $config);
     }
 
     /**
@@ -39,7 +80,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function updateStream($path, $resource, Config $config)
     {
-        // TODO: Implement updateStream() method.
+        throw new NotSupportedException('BunnyCDN does not support steam updating, use ->update() instead');
     }
 
     /**
@@ -47,7 +88,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function rename($path, $newpath)
     {
-        // TODO: Implement rename() method.
+
     }
 
     /**
@@ -85,14 +126,6 @@ class BunnyCDNAdapter extends AbstractAdapter
     /**
      * @inheritDoc
      */
-    public function setVisibility($path, $visibility)
-    {
-        // TODO: Implement setVisibility() method.
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function has($path)
     {
         // TODO: Implement has() method.
@@ -103,7 +136,18 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function read($path)
     {
-        // TODO: Implement read() method.
+        $temp_pointer = tmpfile();
+
+        try {
+            $this->bunnyCDNStorage->downloadFile(
+                $this->bunnyCDNStorage->storageZoneName . '/' . $path,
+                stream_get_meta_data($temp_pointer)['uri']
+            );
+        } catch (BunnyCDNStorageException $e) {
+            return false;
+        }
+
+        return file_get_contents(stream_get_meta_data($temp_pointer)['uri']);
     }
 
     /**
@@ -111,7 +155,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function readStream($path)
     {
-        // TODO: Implement readStream() method.
+        throw new NotSupportedException('BunnyCDN does not support steam reading, use ->read() instead');
     }
 
     /**
@@ -119,7 +163,9 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function listContents($directory = '', $recursive = false)
     {
-        // TODO: Implement listContents() method.
+        return $this->bunnyCDNStorage->getStorageObjects(
+            $this->bunnyCDNStorage->storageZoneName . '/' . $directory
+        );
     }
 
     /**
@@ -152,13 +198,5 @@ class BunnyCDNAdapter extends AbstractAdapter
     public function getTimestamp($path)
     {
         // TODO: Implement getTimestamp() method.
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function getVisibility($path)
-    {
-        // TODO: Implement getVisibility() method.
     }
 }
