@@ -37,9 +37,11 @@
     },
     "autoload": {
         "psr-4": {
-            "PlatformCommunity\\Flysystem\\BunnyCDN\\": "src/",
-            "BunnyWay\\BunnyCDN\\": "../vendor/bunnyway/bunnycdn.php.storage"
-        }
+            "PlatformCommunity\\Flysystem\\BunnyCDN\\": "src/"
+        },
+        "classmap": [
+            "vendor/bunnyway/bunnycdn.php.storage/bunnycdn-storage.php"
+        ]
     },
     "extra": {
         "branch-alias": {
