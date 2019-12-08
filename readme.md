@@ -1,6 +1,6 @@
 <img src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/20630/bunnycdn-logo-dark.png" width="300"/>
 
-# Flysystem Adapter for BunnyCDN.
+# Flysystem Adapter for BunnyCDN Storage
 
 [![Build Status](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn.svg?branch=master)](https://travis-ci.com/PlatformCommunity/flysystem-bunnycdn)
 

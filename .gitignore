@@ -5,3 +5,5 @@ coverage
 coverage.xml
 tests/files
 .idea
+report/
+clover.xml

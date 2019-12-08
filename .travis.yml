@@ -10,4 +10,4 @@ install:
 
 script:
   - vendor/bin/phpunit
-
+  - bash <(curl -s https://codecov.io/bash)
