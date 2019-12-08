@@ -10,7 +10,7 @@
          verbose="true"
 >
     <testsuites>
-        <testsuite name="sifex/tests">
+        <testsuite name="tests">
             <directory suffix=".php">./tests/</directory>
         </testsuite>
     </testsuites>

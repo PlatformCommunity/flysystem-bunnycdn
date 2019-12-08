@@ -1,5 +1,5 @@
 {
-    "name": "sifex/flysystem-bunnycdn",
+    "name": "platformcommunity/flysystem-bunnycdn",
     "description": "Flysystem adapter for BunnyCDN",
     "license": "MIT",
     "authors": [
@@ -18,6 +18,9 @@
                     "url": "https://github.com/BunnyWay/BunnyCDN.PHP.Storage",
                     "type": "git",
                     "reference": "master"
+                },
+                "autoload": {
+                    "classmap": ["/"]
                 }
             }
         }
@@ -33,11 +36,9 @@
         "mockery/mockery": "^1.3"
     },
     "autoload": {
-        "classmap": [
-            "vendor/bunnyway/bunnycdn.php.storage/bunnycdn-storage.php"
-        ],
         "psr-4": {
-            "Sifex\\Flysystem\\BunnyCDN\\": "src/"
+            "PlatformCommunity\\Flysystem\\BunnyCDN\\": "src/",
+            "BunnyWay\\BunnyCDN\\": "../vendor/bunnyway/bunnycdn.php.storage"
         }
     },
     "extra": {

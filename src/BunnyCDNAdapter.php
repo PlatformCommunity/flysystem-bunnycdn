@@ -1,8 +1,8 @@
 <?php
 
-namespace Sifex\Flysystem\BunnyCDN;
+namespace PlatformCommunity\Flysystem\BunnyCDN;
 
-use BunnyCDNStorage;
+
 use BunnyCDNStorageException;
 use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;

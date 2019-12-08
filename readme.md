@@ -1,4 +1,4 @@
-<img src="https://pbs.twimg.com/profile_images/1104546807848198144/gG1fM_t-_400x400.png" width="100"/>
+<img src="https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/20630/bunnycdn-logo-dark.png" width="300"/>
 
 # Flysystem Adapter for BunnyCDN.
 
@@ -7,7 +7,7 @@
 _TBA_ 
 
 ```bash
-composer require sifex/flysystem-bunnycdn
+composer require platformcommunity/flysystem-bunnycdn
 ```
 
 ## Usage
@@ -15,10 +15,10 @@ composer require sifex/flysystem-bunnycdn
 ```php
 use OpenCloud\OpenStack;
 use OpenCloud\Rackspace;
-use Sifex\Flysystem\Filesystem;
-use Sifex\Flysystem\BunnyCDN\BunnyCDNAdapter as Adapter;
+use PlatformCommunity\Flysystem\Filesystem;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter as Adapter;
 
-$client = new Rackspace(Rackspace::UK_IDENTITY_ENDPOINT, array(
+$client = new BunnyCDNAdapter(Rackspace::UK_IDENTITY_ENDPOINT, array(
     'username' => ':username',
     'apiKey' => ':password',
 ));

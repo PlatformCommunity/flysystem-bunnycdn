@@ -2,7 +2,7 @@
 
 use League\Flysystem\Config;
 use PHPUnit\Framework\TestCase;
-use Sifex\Flysystem\BunnyCDN\BunnyCDNAdapter;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 
 class BunnyCDNAdapterTest extends TestCase
 {
