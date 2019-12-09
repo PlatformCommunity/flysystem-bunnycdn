@@ -1,7 +1,12 @@
 <?php
 
 use BunnyCDN\Storage\BunnyCDNStorage;
+use BunnyCDN\Storage\Exceptions\BunnyCDNStorageException;
 use League\Flysystem\Config;
+use League\Flysystem\FileNotFoundException;
+use League\Flysystem\UnreadableFileException;
+use Mockery\LegacyMockInterface;
+use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 
@@ -22,7 +27,7 @@ class BunnyCDNAdapterTest extends TestCase
     /**
      * @param $storageZoneName
      * @param $apiAccessKey
-     * @return BunnyCDNStorage|\Mockery\LegacyMockInterface|\Mockery\MockInterface
+     * @return BunnyCDNStorage|LegacyMockInterface|MockInterface
      */
     private function getBunnyCDNMockObject($storageZoneName = self::STORAGE_ZONE_NAME, $apiAccessKey = self::API_ACCESS_KEY)
     {
@@ -70,7 +75,65 @@ class BunnyCDNAdapterTest extends TestCase
         return $object;
     }
 
-    public function testWrite()
+    /**
+     * @param $name
+     * @return ReflectionMethod
+     * @throws ReflectionException
+     */
+    protected static function getBunnyCDNAdapterMethod($name) {
+        $class = new ReflectionClass(BunnyCDNAdapter::class);
+        $method = $class->getMethod($name);
+        $method->setAccessible(true);
+        return $method;
+    }
+
+    /**
+     * @test
+     * @throws ReflectionException
+     */
+    public function it_path_split()
+    {
+        $reflection = self::getBunnyCDNAdapterMethod('splitPathIntoDirectoryAndFile');
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
+        $this->assertEquals(
+            $reflection->invokeArgs($adapter, ['/testing-dir']),
+            [
+                'file' => 'testing-dir',
+                'dir' => '',
+            ]
+        );
+
+        $this->assertEquals(
+            $reflection->invokeArgs($adapter, ['/testing-dir/']),
+            [
+                'file' => 'testing-dir',
+                'dir' => '',
+            ]
+        );
+
+        $this->assertEquals(
+            $reflection->invokeArgs($adapter, ['/testing-dir/file.txt']),
+            [
+                'file' => 'file.txt',
+                'dir' => '/testing-dir',
+            ]
+        );
+
+        $this->assertEquals(
+            $reflection->invokeArgs($adapter, ['/testing-dir/nested/file.txt']),
+            [
+                'file' => 'file.txt',
+                'dir' => '/testing-dir/nested',
+            ]
+        );
+    }
+
+    /**
+     * @test
+     *
+     */
+    public function it_write()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue(
@@ -78,90 +141,97 @@ class BunnyCDNAdapterTest extends TestCase
         );
     }
 
-    public function testHas()
+    /**
+     * @test
+     *
+     */
+    public function it_has()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->has('directory/nested_file123.txt'));
-    }
-
-    public function testHas_Directory()
-    {
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->has('directory'));
-    }
-
-    public function testHas_Directory_Slash()
-    {
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->has('directory/'));
-    }
-
-    public function testHas_Directory_Nested()
-    {
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->has('directory/nested_file123.txt'));
     }
 
-    public function testHas_Slash_Prefix()
+    /**
+     * @test
+     *
+     */
+    public function it_has_slash_prefix()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->has('/test123.txt'));
-    }
-
-    public function testHas_Double_Slash_Prefix()
-    {
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->has('//test123.txt'));
+        $this->assertTrue($adapter->has('///test123.txt'));
     }
 
-    public function testHas_Inverse()
+    /**
+     * @test
+     *
+     */
+    public function it_has_inverse()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertFalse($adapter->has('/not_in_test_files.txt'));
-    }
-
-    public function testHas_Inverse_Directory()
-    {
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertFalse($adapter->has('not_a_directory'));
-    }
-
-    public function testHas_Inverse_Directory_Nested()
-    {
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertFalse($adapter->has('not_a_directory/nested_file123.txt'));
     }
 
-    public function testRead()
+    /**
+     * @throws \BunnyCDN\Storage\Exception
+     * @test
+     * @throws \League\Flysystem\Exception
+     * @throws BunnyCDNStorageException
+     */
+    public function it_read()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertEquals(
-            $adapter->read('testing/test.txt'),
+            $adapter->read('directory/nested_file123.txt')['contents'],
             self::FILE_CONTENTS
         );
     }
 
-    public function testDelete()
+    /**
+     * @test
+     *
+     */
+    public function it_delete()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->delete('nested_file123.txt'));
     }
 
-    public function testDeleteDir()
+    /**
+     * @test
+     *
+     */
+    public function it_delete_dir()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue($adapter->deleteDir('directory'));
     }
 
-    public function testCopy()
+    /**
+     * @throws \BunnyCDN\Storage\Exception
+     * @test
+     * @throws \League\Flysystem\Exception
+     * @throws BunnyCDNStorageException
+     */
+    public function it_copy() // TODO Broken for directories
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue(
-            $adapter->copy('directory/test.txt', 'directory/test_copy.txt')
+            $adapter->copy('directory/nested_file123.txt', 'directory/nested_file456.txt')
         );
     }
 
-    public function testListContents()
+    /**
+     * @test
+     * @throws BunnyCDNStorageException
+     */
+    public function it_list_contents() // TODO This is broken
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertCount(
@@ -169,23 +239,40 @@ class BunnyCDNAdapterTest extends TestCase
         );
     }
 
-    public function testGetSize()
+    /**
+     * @throws BunnyCDNStorageException
+     * @throws FileNotFoundException
+     * @test
+     * @throws UnreadableFileException
+     */
+    public function it_get_size()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
         $this->assertIsNumeric(
-            $adapter->getSize('test123.txt')
+            $adapter->getSize('test123.txt')['size']
         );
     }
 
-    public function testRename()
+    /**
+     * @throws \BunnyCDN\Storage\Exception
+     * @test
+     * @throws \League\Flysystem\Exception
+     * @throws BunnyCDNStorageException
+     */
+    public function it_rename()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue(
-            $adapter->rename('directory/test.txt', 'directory/test_copy.txt')
+            $adapter->rename('directory/nested_file123.txt', 'directory/test_copy.txt')
         );
     }
 
-    public function testUpdate()
+    /**
+     * @test
+     *
+     */
+    public function it_update()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue(
@@ -193,7 +280,11 @@ class BunnyCDNAdapterTest extends TestCase
         );
     }
 
-    public function testCreateDir()
+    /**
+     * @test
+     *
+     */
+    public function it_create_dir()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertTrue(
@@ -201,12 +292,96 @@ class BunnyCDNAdapterTest extends TestCase
         );
     }
 
-    public function testGetTimestamp()
+    /**
+     * @test
+     * @throws BunnyCDNStorageException
+     * @throws FileNotFoundException
+     * @throws UnreadableFileException
+     */
+    public function it_get_timestamp()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
         $this->assertIsNumeric(
-            $adapter->getTimestamp('directory/nested_file123.txt')
+            $adapter->getTimestamp('directory/nested_file123.txt')['timestamp']
         );
+    }
+
+    /**
+     * @test
+     * @throws ReflectionException
+     */
+    public function it_normalise_path()
+    {
+        $reflection = self::getBunnyCDNAdapterMethod('startsWith');
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * @test
+     * @throws ReflectionException
+     */
+    public function it_starts_with()
+    {
+        $reflection = self::getBunnyCDNAdapterMethod('startsWith');
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
+        $this->assertTrue(
+            $reflection->invokeArgs($adapter, ['/test', '/'])
+        );
+
+        $this->assertFalse(
+            $reflection->invokeArgs($adapter, ['test', '/'])
+        );
+    }
+
+    /**
+     * @test
+     * @throws ReflectionException
+     */
+    public function it_ends_with()
+    {
+        $reflection = self::getBunnyCDNAdapterMethod('endsWith');
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
+        $this->assertTrue(
+            $reflection->invokeArgs($adapter, ['test/', '/'])
+        );
+
+        $this->assertFalse(
+            $reflection->invokeArgs($adapter, ['test', '/'])
+        );
+
+        $this->assertTrue(
+            $reflection->invokeArgs($adapter, ['test', ''])
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_retrieve_metadata()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $metadata = $adapter->getMetadata('test123.txt');
+
+        $this->assertArrayHasKey('type', $metadata);
+        $this->assertArrayHasKey('dirname', $metadata);
+        $this->assertArrayHasKey('mimetype', $metadata);
+        $this->assertArrayHasKey('guid', $metadata);
+        $this->assertArrayHasKey('path', $metadata);
+        $this->assertArrayHasKey('object_name', $metadata);
+        $this->assertArrayHasKey('size', $metadata);
+        $this->assertArrayHasKey('timestamp', $metadata);
+        $this->assertArrayHasKey('server_id', $metadata);
+        $this->assertArrayHasKey('user_id', $metadata);
+        $this->assertArrayHasKey('last_changed', $metadata);
+        $this->assertArrayHasKey('date_created', $metadata);
+        $this->assertArrayHasKey('storage_zone_name', $metadata);
+        $this->assertArrayHasKey('storage_zone_id', $metadata);
+        $this->assertArrayHasKey('checksum', $metadata);
+        $this->assertArrayHasKey('replicated_zones', $metadata);
     }
 }
