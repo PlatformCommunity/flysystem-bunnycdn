@@ -17,7 +17,7 @@ use BunnyCDN\Storage\BunnyCDNStorage;
 use League\Flysystem\Filesystem;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 
-$client = new BunnyCDNAdapter(new BunnyCDNStorage('storage-zone', 'api-key'));
+$client = new BunnyCDNAdapter(new BunnyCDNStorage('storage-zone', 'api-key', 'de'));
 $filesystem = new Filesystem($client);
 ```
 
