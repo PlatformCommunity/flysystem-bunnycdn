@@ -13,7 +13,6 @@
         "league/flysystem": "~1.0",
         "guzzlehttp/guzzle": "~6.0",
         "platformcommunity/bunnycdn-storage": "~0.2",
-        "pcov/clobber": "^2.0",
         "ext-json": "*"
     },
     "require-dev": {
