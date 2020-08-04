@@ -11,13 +11,13 @@ use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
-class BunnyCDNAdapterTest extends TestCase
+class BunnyCDNAdapterTest_Production extends TestCase
 {
     /** @var string Storage Zone Name */
-    const STORAGE_ZONE_NAME = 'storage-zone';
+    const STORAGE_ZONE_NAME = 'test-flysystem';
 
     /** @var string API Access Key */
-    const API_ACCESS_KEY = '11111111-1111-1111-111111111111-1111-1111';
+    const API_ACCESS_KEY = '5b035498-3274-4cd3-af98f91d01e8-b64d-4617';
 
     /**
      * File Contents for Read / Write testing
@@ -45,37 +45,36 @@ class BunnyCDNAdapterTest extends TestCase
      */
     private function getBunnyCDNMockObject($storageZoneName = self::STORAGE_ZONE_NAME, $apiAccessKey = self::API_ACCESS_KEY)
     {
-        $mock = Mockery::mock(BunnyCDNStorage::class);
+//        $mock = Mockery::mock(BunnyCDNStorage::class);
+//
+//        $mock->shouldReceive('uploadFile')->andReturnUsing(function($localPath, $path) {
+//            $this->exampleFilesAndFolders[] = [
+//                'path' => '/' . Util::normalizePath($path),
+//                'is_dir' => false
+//            ];
+//        });
+//
+//        $mock->shouldReceive('deleteObject')->andReturnUsing(function($path) {
+//            $this->exampleFilesAndFolders = array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; });
+//        });
+//
+//        $mock->shouldReceive('downloadFile')->andReturnUsing(function($path, $localPath) {
+//            if(count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; })) === 0) { return false; }
+//            file_put_contents($localPath, self::TEST_FILE_CONTENTS);
+//            return true;
+//        });
+//
+//        $mock->shouldReceive('getStorageObjects')->andReturnUsing(function($path) {
+//            return array_map(static function ($file) {
+//                return self::getExampleFile($file['path'], $file['is_dir']);
+//            }, $this->exampleFilesAndFolders);
+//        });
+//
+//        $mock->storageZoneName = $storageZoneName;
+//        $mock->apiAccessKey = $apiAccessKey;
+//        return $mock;
 
-        $mock->shouldReceive('uploadFile')->andReturnUsing(function($localPath, $path) {
-            $this->exampleFilesAndFolders[] = [
-                'path' => '/' . Util::normalizePath($path),
-                'is_dir' => false
-            ];
-        });
-
-        $mock->shouldReceive('deleteObject')->andReturnUsing(function($path) {
-            $this->exampleFilesAndFolders = array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; });
-            return "{status: 200}";
-        });
-
-        $mock->shouldReceive('downloadFile')->andReturnUsing(function($path, $localPath) {
-            if(count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; })) === 0) { return false; }
-            file_put_contents($localPath, self::TEST_FILE_CONTENTS);
-            return true;
-        });
-
-        $mock->shouldReceive('getStorageObjects')->andReturnUsing(function($path) {
-            return array_map(static function ($file) {
-                return self::getExampleFile($file['path'], $file['is_dir']);
-            }, $this->exampleFilesAndFolders);
-        });
-
-        $mock->storageZoneName = $storageZoneName;
-        $mock->apiAccessKey = $apiAccessKey;
-        return $mock;
-
-//         return new BunnyCDNStorage('platform-content', '9a41c0ca-1ed4-4512-b9b15ed88c42-a03c-463b');
+        return new BunnyCDNStorage('platform-content', '9a41c0ca-1ed4-4512-b9b15ed88c42-a03c-463b', 'de');
     }
 
     /**
@@ -225,9 +224,7 @@ class BunnyCDNAdapterTest extends TestCase
             $adapter->copy('testing/test.txt', 'testing/test_copied.txt')
         );
 
-        $this->assertTrue(
-            $adapter->delete('testing/test_copied.txt')
-        );
+        $this->assertTrue($adapter->delete('testing/test_copied.txt'));
     }
 
     /**
@@ -235,7 +232,7 @@ class BunnyCDNAdapterTest extends TestCase
      * @throws BunnyCDNStorageException
      * @throws Exception
      */
-    public function it_list_contents() // TODO This is broken
+    public function it_list_contents()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         $this->assertIsArray(
@@ -260,6 +257,8 @@ class BunnyCDNAdapterTest extends TestCase
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
+        $this->assertTrue($adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
+
         $this->assertIsNumeric(
             $adapter->getSize('testing/test.txt')['size']
         );
@@ -276,15 +275,13 @@ class BunnyCDNAdapterTest extends TestCase
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
-        $this->assertTrue(
-            $adapter->rename('testing/test.txt', 'testing/test_renamed.txt')
-        );
+        $this->assertTrue($adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
+
+        $this->assertTrue($adapter->rename('testing/test.txt', 'testing/test_renamed.txt'));
 
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
-        $this->assertTrue(
-            $adapter->rename('testing/test_renamed.txt', 'testing/test.txt')
-        );
+        $this->assertTrue($adapter->rename('testing/test_renamed.txt', 'testing/test.txt'));
     }
 
     /**
@@ -306,13 +303,8 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_create_dir()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        $this->assertTrue(
-            $adapter->createDir('testing_created/', new Config())
-        );
-
-        $this->assertTrue(
-            $adapter->deleteDir('testing_created/')
-        );
+        $this->assertTrue($adapter->createDir('testing_created/', new Config()));
+        $this->assertTrue($adapter->deleteDir('testing_created/'));
     }
 
     /**

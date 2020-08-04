@@ -7,3 +7,4 @@ tests/files
 .idea
 report/
 clover.xml
+tests/BunnyCDNAdapterTest_Production.php
