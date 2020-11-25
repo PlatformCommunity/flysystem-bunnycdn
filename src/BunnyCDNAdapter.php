@@ -148,7 +148,7 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         try {
             return (bool)$this->bunnyCDNStorage->deleteObject(
-                $this->fullPath($dirname)
+                $this->fullPath($dirname) . "/"
             );
         // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
