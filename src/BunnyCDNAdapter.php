@@ -302,7 +302,7 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         return [
             'type'      => $fileObject->IsDirectory ? 'dir' : 'file',
-            'dirname'   => $this->removePathPrefix($fileObject->Path),
+            'dirname'   => trim($this->removePathPrefix($fileObject->Path), "/"),
             'mimetype'  => '',
             'guid' => $fileObject->Guid,
             'path'      => Util::normalizePath($this->removePathPrefix($fileObject->Path) . $fileObject->ObjectName),
