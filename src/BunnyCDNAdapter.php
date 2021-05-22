@@ -7,10 +7,10 @@ use BunnyCDN\Storage\Exceptions\BunnyCDNStorageException;
 use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use League\Flysystem\Adapter\Polyfill\StreamedCopyTrait;
+use League\Flysystem\Adapter\Polyfill\StreamedTrait;
 use League\Flysystem\Config;
 use League\Flysystem\Exception;
 use League\Flysystem\FileNotFoundException;
-use League\Flysystem\NotSupportedException;
 use League\Flysystem\UnreadableFileException;
 use stdClass;
 
@@ -18,6 +18,7 @@ class BunnyCDNAdapter extends AbstractAdapter
 {
     use NotSupportingVisibilityTrait;
     use StreamedCopyTrait;
+    use StreamedTrait;
 
     /**
      * The BunnyCDN Storage Container
@@ -64,18 +65,6 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     /**
-     * @codeCoverageIgnore
-     * @param string $path
-     * @param resource $resource
-     * @param Config $config
-     * @return array|false|void
-     */
-    public function writeStream($path, $resource, Config $config)
-    {
-        throw new NotSupportedException('BunnyCDN does not support steam writing, use ->write() instead');
-    }
-
-    /**
      * @param string $path
      * @param string $contents
      * @param Config $config
@@ -84,18 +73,6 @@ class BunnyCDNAdapter extends AbstractAdapter
     public function update($path, $contents, Config $config)
     {
         return $this->write($path, $contents, $config);
-    }
-
-    /**
-     * @codeCoverageIgnore
-     * @param string $path
-     * @param resource $resource
-     * @param Config $config
-     * @return array|false|void
-     */
-    public function updateStream($path, $resource, Config $config)
-    {
-        throw new NotSupportedException('BunnyCDN does not support steam updating, use ->update() instead');
     }
 
     /**
@@ -231,16 +208,6 @@ class BunnyCDNAdapter extends AbstractAdapter
         $data['contents'] = (string) file_get_contents(stream_get_meta_data($temp_pointer)['uri']);
 
         return $data;
-    }
-
-    /**
-     * @codeCoverageIgnore
-     * @param string $path
-     * @return array|false|void
-     */
-    public function readStream($path)
-    {
-        throw new NotSupportedException('BunnyCDN does not support steam reading yet, use ->read() instead');
     }
 
     /**
