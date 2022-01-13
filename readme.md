@@ -6,9 +6,18 @@
 
 ## Installation
 
+For **Flysystem v1**, use the v1 version of `flysystem-bunnycdn`.
+
 ```bash
-composer require platformcommunity/flysystem-bunnycdn
+composer require platformcommunity/flysystem-bunnycdn "^1.0"
 ```
+
+For **Flysystem v2**, use the v2 version of `flysystem-bunnycdn`.
+
+```bash
+composer require platformcommunity/flysystem-bunnycdn "^2.0"
+```
+
 
 ## Usage
 

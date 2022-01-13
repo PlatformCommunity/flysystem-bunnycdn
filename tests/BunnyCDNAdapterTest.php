@@ -15,10 +15,10 @@ use PlatformCommunity\Flysystem\BunnyCDN\Util;
 class BunnyCDNAdapterTest extends TestCase
 {
     /** @var string Storage Zone Name */
-    const STORAGE_ZONE_NAME = 'storage-zone';
+    const STORAGE_ZONE_NAME = 'test12391248982';
 
     /** @var string API Access Key */
-    const API_ACCESS_KEY = '11111111-1111-1111-111111111111-1111-1111';
+    const API_ACCESS_KEY = 'f053a6e4-5b85-46a3-922fc6664a1e-cb04-47e0';
 
     /**
      * File Contents for Read / Write testing
@@ -49,6 +49,9 @@ class BunnyCDNAdapterTest extends TestCase
         $mock = Mockery::mock(BunnyCDNStorage::class);
 
         $mock->shouldReceive('uploadFile')->andReturnUsing(function($localPath, $path) {
+            if (count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] == $path; }))){
+                throw new BunnyCDNStorageException('Cannot upload file');
+            }
             $this->exampleFilesAndFolders[] = [
                 'path' => '/' . Util::normalizePath($path),
                 'is_dir' => false
@@ -56,12 +59,19 @@ class BunnyCDNAdapterTest extends TestCase
         });
 
         $mock->shouldReceive('deleteObject')->andReturnUsing(function($path) {
+            $new_filesystem = array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; });
+
+            if($this->exampleFilesAndFolders == $new_filesystem) {
+                throw new BunnyCDNStorageException('Could not delete non-existant file');
+            }
             $this->exampleFilesAndFolders = array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; });
             return "{status: 200}";
         });
 
         $mock->shouldReceive('downloadFile')->andReturnUsing(function($path, $localPath) {
-            if(count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; })) === 0) { return false; }
+            if(count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] === $path; })) === 0) {
+                throw new BunnyCDNStorageException('404');
+            }
             file_put_contents($localPath, self::TEST_FILE_CONTENTS);
             return true;
         });
@@ -76,7 +86,7 @@ class BunnyCDNAdapterTest extends TestCase
         $mock->apiAccessKey = $apiAccessKey;
         return $mock;
 
-//         return new BunnyCDNStorage('platform-content', '9a41c0ca-1ed4-4512-b9b15ed88c42-a03c-463b');
+//        return new BunnyCDNStorage('test12391248982', 'f053a6e4-5b85-46a3-922fc6664a1e-cb04-47e0', 'de');
     }
 
     /**
@@ -124,13 +134,7 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_write()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertTrue(
-            $adapter->write('testing/test.txt', 'Testing.txt', new Config())
-        );
-
-        self::assertTrue(
-            $adapter->write('testing/test.txt', self::TEST_FILE_CONTENTS, new Config())
-        );
+        $this->assertNull($adapter->write('testing/test123.txt', self::TEST_FILE_CONTENTS, new Config()));
     }
 
     /**
@@ -140,11 +144,11 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_has()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertTrue($adapter->has('/testing/test.txt'));
-        self::assertTrue($adapter->has('testing/test.txt'));
-        self::assertTrue($adapter->has('testing/test.txt/'));
-        self::assertTrue($adapter->has('testing'));
-        self::assertTrue($adapter->has('testing/'));
+        self::assertTrue($adapter->fileExists('/testing/test.txt'));
+        self::assertTrue($adapter->fileExists('testing/test.txt'));
+        self::assertTrue($adapter->fileExists('testing/test.txt/'));
+        self::assertTrue($adapter->fileExists('testing'));
+        self::assertTrue($adapter->fileExists('testing/'));
     }
 
     /**
@@ -154,9 +158,9 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_has_slash_prefix()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertTrue($adapter->has('/testing/test.txt'));
-        self::assertTrue($adapter->has('//testing/test.txt'));
-        self::assertTrue($adapter->has('///testing/test.txt'));
+        self::assertTrue($adapter->fileExists('/testing/test.txt'));
+        self::assertTrue($adapter->fileExists('//testing/test.txt'));
+        self::assertTrue($adapter->fileExists('///testing/test.txt'));
     }
 
     /**
@@ -166,24 +170,25 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_has_inverse()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertFalse($adapter->has('/not_in_test_files.txt'));
-        self::assertFalse($adapter->has('not_a_directory'));
-        self::assertFalse($adapter->has('not_a_testing/test.txt'));
+        self::assertFalse($adapter->fileExists('/not_in_test_files.txt'));
+        self::assertFalse($adapter->fileExists('not_a_directory'));
+        self::assertFalse($adapter->fileExists('not_a_testing/test.txt'));
     }
 
     /**
      * @test
      * @throws \League\Flysystem\Exception
-     * @throws BunnyCDNStorageException
+
      * @throws Exception
      */
     public function it_read()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
+        print_r($adapter->read('/testing/test.txt'));
         self::assertEquals(
             self::TEST_FILE_CONTENTS,
-            $adapter->read('/testing/test.txt')['contents']
+            $adapter->read('/testing/test.txt')
         );
     }
 
@@ -194,20 +199,27 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_delete()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertTrue($adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
-        self::assertTrue($adapter->delete('/testing/test.txt'));
-        self::assertTrue($adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
+        self::assertNull($adapter->write('/testing/test2.txt', self::TEST_FILE_CONTENTS, new Config()));
+        self::assertNull($adapter->delete('/testing/test2.txt'));
+        self::assertNull($adapter->write('/testing/test2.txt', self::TEST_FILE_CONTENTS, new Config()));
+
+        self::expectException(\League\Flysystem\UnableToDeleteFile::class);
+        self::assertNull($adapter->delete('/example_file_that_doesnt_exist'));
     }
 
     /**
      * @test
-     * @throws Exception
+     * @return void
+     * @throws \League\Flysystem\FilesystemException
      */
     public function it_delete_dir()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertTrue($adapter->createDir('/testing_for_deletion/',  new Config()));
-        self::assertTrue($adapter->deleteDir('/testing_for_deletion/'));
+        self::assertNull($adapter->createDirectory('/testing_for_deletion/',  new Config()));
+        self::assertNull($adapter->deleteDirectory('/testing_for_deletion/'));
+
+        self::expectException(\League\Flysystem\UnableToDeleteDirectory::class);
+        self::assertNull($adapter->deleteDirectory('/testing_for_deletion/'));
     }
 
     /**
@@ -215,28 +227,29 @@ class BunnyCDNAdapterTest extends TestCase
      *
      * @test
      * @throws \League\Flysystem\Exception
-     * @throws BunnyCDNStorageException
      * @throws Exception
      */
     public function it_copy()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
-        self::assertTrue(
-            $adapter->copy('testing/test.txt', 'testing/test_copied.txt')
+        self::assertNull(
+            $adapter->copy('testing/test.txt', 'testing/test_copied.txt', new Config())
         );
 
-        self::assertTrue(
+        self::assertNull(
             $adapter->delete('testing/test_copied.txt')
         );
+
+        self::expectException(\League\Flysystem\UnableToCopyFile::class);
+        $adapter->copy('/example_file_that_doesnt_exist', '/example_file_that_also_doesnt_exist', new Config());
     }
 
     /**
      * @test
-     * @throws BunnyCDNStorageException
      * @throws Exception
      */
-    public function it_list_contents() // TODO This is broken
+    public function it_list_contents()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
         self::assertIsArray(
@@ -245,58 +258,36 @@ class BunnyCDNAdapterTest extends TestCase
         self::assertIsArray(
             $adapter->listContents('/')[0]
         );
-        $this->assertHasMetadataKeys(
-            $adapter->listContents('/')[0]
-        );
     }
 
     /**
-     * @throws BunnyCDNStorageException
-     * @throws FileNotFoundException
      * @test
-     * @throws UnreadableFileException
-     * @throws Exception
+     * @return void
      */
     public function it_get_size()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
         self::assertIsNumeric(
-            $adapter->getSize('testing/test.txt')['size']
+            $adapter->fileSize('testing/test.txt')->fileSize()
         );
     }
 
     /**
-     * @throws \BunnyCDN\Storage\Exception
      * @test
-     * @throws \League\Flysystem\Exception
-     * @throws BunnyCDNStorageException
-     * @throws Exception
+     * @return void
+     * @throws \League\Flysystem\FilesystemException
      */
     public function it_rename()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
-        self::assertTrue(
-            $adapter->rename('testing/test.txt', 'testing/test_renamed.txt')
+        self::assertNull(
+            $adapter->move('testing/test.txt', 'testing/test_renamed.txt', new Config())
         );
 
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-
-        self::assertTrue(
-            $adapter->rename('testing/test_renamed.txt', 'testing/test.txt')
-        );
-    }
-
-    /**
-     * @test
-     * @throws Exception
-     */
-    public function it_update()
-    {
-        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertTrue(
-            $adapter->update('testing/test.txt', self::TEST_FILE_CONTENTS, new Config())
+        self::assertNull(
+            $adapter->move('testing/test_renamed.txt', 'testing/test.txt', new Config())
         );
     }
 
@@ -307,20 +298,25 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_create_dir()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        self::assertTrue(
-            $adapter->createDir('testing_created/', new Config())
+
+        self::assertNull(
+            $adapter->createDirectory('testing_created/', new Config())
         );
 
-        self::assertTrue(
-            $adapter->deleteDir('testing_created/')
+        self::expectException(\League\Flysystem\UnableToCreateDirectory::class);
+
+        self::assertNull(
+            $adapter->createDirectory('testing_created/', new Config())
+        );
+
+        self::assertNull(
+            $adapter->deleteDirectory('testing_created/')
         );
     }
 
     /**
      * @test
-     * @throws BunnyCDNStorageException
-     * @throws FileNotFoundException
-     * @throws UnreadableFileException
+     * @return void
      * @throws Exception
      */
     public function it_get_timestamp()
@@ -328,51 +324,35 @@ class BunnyCDNAdapterTest extends TestCase
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
         self::assertIsNumeric(
-            $adapter->getTimestamp('testing/test.txt')['timestamp']
+            $adapter->lastModified('testing/test.txt')->lastModified()
         );
     }
 
     /**
      * @test
-     * @throws Exception
+     * @return void
      */
-    public function it_can_retrieve_metadata()
+    public function it_get_visibility()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
 
-        $metadata = $adapter->getMetadata('testing/test.txt');
+        self::expectException(\League\Flysystem\UnableToRetrieveMetadata::class);
 
-        $this->assertHasMetadataKeys($metadata);
-    }
-
-    private function assertHasMetadataKeys($metadata) {
-        self::assertArrayHasKey('type', $metadata);
-        self::assertArrayHasKey('dirname', $metadata);
-        self::assertArrayHasKey('mimetype', $metadata);
-        self::assertArrayHasKey('guid', $metadata);
-        self::assertArrayHasKey('path', $metadata);
-        self::assertArrayHasKey('object_name', $metadata);
-        self::assertArrayHasKey('size', $metadata);
-        self::assertArrayHasKey('timestamp', $metadata);
-        self::assertArrayHasKey('server_id', $metadata);
-        self::assertArrayHasKey('user_id', $metadata);
-        self::assertArrayHasKey('last_changed', $metadata);
-        self::assertArrayHasKey('date_created', $metadata);
-        self::assertArrayHasKey('storage_zone_name', $metadata);
-        self::assertArrayHasKey('storage_zone_id', $metadata);
-        self::assertArrayHasKey('checksum', $metadata);
-        self::assertArrayHasKey('replicated_zones', $metadata);
+        $adapter->visibility('testing/test.txt');
     }
 
     /**
      * @test
-     * @throws Exception
+     * @return void
      */
-    public function it_tests_flysystem_compatibility()
+    public function it_set_visibility()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        $filesystem = new Filesystem($adapter);
-        self::assertTrue($filesystem->createDir("test"));
-        self::assertTrue($filesystem->deleteDir("test"));
+
+        self::expectException(\League\Flysystem\UnableToSetVisibility::class);
+
+        $adapter->setVisibility('testing/test.txt', 878);
+
     }
+
 }
