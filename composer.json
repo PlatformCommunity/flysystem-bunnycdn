@@ -14,8 +14,7 @@
         "ext-json": "*"
     },
     "require-dev": {
-        "pcov/clobber": "^2.0",
-        "phpunit/phpunit": "^8.5.22",
+        "phpunit/phpunit": "@stable",
         "mockery/mockery": "^1.3"
     },
     "autoload": {
