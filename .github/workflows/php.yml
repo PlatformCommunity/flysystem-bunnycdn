@@ -11,8 +11,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     strategy:
       matrix:
-        php-versions: [ '7.0', '7.1', '7.2', '7.4', '8.0', '8.1' ]
-        phpunit-versions: ['latest']
+        php-versions: [ '7.2', '7.4', '8.0', '8.1' ]
 
     steps:
     - uses: actions/checkout@v2
@@ -21,9 +20,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php-versions }}
-        ini-values: pcov.directory=api #optional, see above for usage.
         coverage: pcov
-        tools: phpunit:${{ matrix.phpunit-versions }}
 
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
@@ -39,11 +36,6 @@ jobs:
 
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress --no-interaction
-
-    - name: Setup PCOV
-      run: |
-        composer require pcov/clobber
-        vendor/bin/pcov clobber
 
     - name: Run tests
       run: vendor/bin/phpunit -c ./phpunit.xml
