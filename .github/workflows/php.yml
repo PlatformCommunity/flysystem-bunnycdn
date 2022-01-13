@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix:
         php-versions: [ '7.0', '7.1', '7.2', '7.4', '8.0', '8.1' ]
+        phpunit-versions: ['latest']
 
     steps:
     - uses: actions/checkout@v2
@@ -22,6 +23,7 @@ jobs:
         php-version: ${{ matrix.php-versions }}
         ini-values: pcov.directory=api #optional, see above for usage.
         coverage: pcov
+        tools: phpunit:${{ matrix.phpunit-versions }}
 
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
