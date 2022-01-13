@@ -40,5 +40,9 @@ jobs:
     - name: Run tests
       run: vendor/bin/phpunit -c ./phpunit.xml
 
+    - uses: php-actions/phpstan@v3
+      with:
+        path: src/
+
     - name: Upload to PCOV
       run: bash <(curl -s https://codecov.io/bash)
