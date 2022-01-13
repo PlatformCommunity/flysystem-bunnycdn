@@ -1,0 +1,18 @@
+name: Github CI
+
+on: [push]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup PHP with PCOV
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.0'
+        ini-values: pcov.directory=api #optional, see above for usage.
+        coverage: pcov
+    - uses: php-actions/composer@v5
+    - uses: php-actions/phpunit@v3
