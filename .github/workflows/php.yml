@@ -25,6 +25,11 @@ jobs:
         coverage: pcov
         tools: phpunit:${{ matrix.phpunit-versions }}
 
+    - name: Setup PCOV
+      run: |
+        composer require pcov/clobber
+        vendor/bin/pcov clobber
+
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
 
