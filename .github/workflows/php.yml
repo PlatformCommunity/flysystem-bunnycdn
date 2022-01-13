@@ -8,11 +8,20 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-latest'
+    strategy:
+      matrix:
+        php-versions: [ '7.4', '8.0', '8.1' ]
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Setup PHP with PCOV
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-versions }}
+        ini-values: pcov.directory=api #optional, see above for usage.
+        coverage: pcov
 
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
@@ -25,9 +34,6 @@ jobs:
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
         restore-keys: |
           ${{ runner.os }}-php-
-
-    - name: Install PCOV
-      run: pecl install pcov
 
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress --no-interaction
