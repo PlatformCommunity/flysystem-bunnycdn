@@ -339,7 +339,8 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_can_retrieve_metadata()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        $metadata = $adapter->getMetadata('testing.txt');
+
+        $metadata = $adapter->getMetadata('testing/test.txt');
 
         $this->assertHasMetadataKeys($metadata);
     }
