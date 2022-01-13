@@ -45,7 +45,7 @@ class BunnyCDNAdapter extends AbstractAdapter
     public function write($path, $contents, Config $config)
     {
         $temp_pointer = tmpfile();
-        fwrite($temp_pointer, $contents or '');
+        fwrite($temp_pointer, $contents);
 
         /** @var string $url */
         $url = stream_get_meta_data($temp_pointer)['uri'];
@@ -125,7 +125,7 @@ class BunnyCDNAdapter extends AbstractAdapter
     {
         try {
             return (bool)$this->bunnyCDNStorage->deleteObject(
-                $this->fullPath($dirname) . "/"
+                rtrim($this->fullPath($dirname), '/').'/'
             );
         // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
@@ -150,7 +150,7 @@ class BunnyCDNAdapter extends AbstractAdapter
         try {
             $this->bunnyCDNStorage->uploadFile(
                 $url,
-                $this->fullPath($dirname).'/'
+                rtrim($this->fullPath($dirname), '/').'/'
             );
         // @codeCoverageIgnoreStart
         } catch (BunnyCDNStorageException $e) {
