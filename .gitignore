@@ -8,3 +8,4 @@ tests/files
 report/
 clover.xml
 ./tests/BunnyCDNAdapterTest_Production.php
+.phpunit.result.cache
