@@ -49,19 +49,31 @@ class BunnyCDNAdapterTest extends TestCase
         $mock = Mockery::mock(BunnyCDNStorage::class);
 
         $mock->shouldReceive('uploadFile')->andReturnUsing(function($localPath, $path) {
+            if (count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] == $path; }))){
+                if(filesize($localPath) === 0) {
+                    throw new BunnyCDNStorageException('Cannot upload file');
+                }
+            }
             $this->exampleFilesAndFolders[] = [
                 'path' => '/' . Util::normalizePath($path),
-                'is_dir' => false
+                'is_dir' => filesize($localPath) === 0
             ];
         });
 
         $mock->shouldReceive('deleteObject')->andReturnUsing(function($path) {
+            $new_filesystem = array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; });
+
+            if($this->exampleFilesAndFolders == $new_filesystem) {
+                throw new BunnyCDNStorageException('Could not delete non-existant file');
+            }
             $this->exampleFilesAndFolders = array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; });
             return "{status: 200}";
         });
 
         $mock->shouldReceive('downloadFile')->andReturnUsing(function($path, $localPath) {
-            if(count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] !== $path; })) === 0) { return false; }
+            if(count(array_filter($this->exampleFilesAndFolders, static function($file) use ($path) { return $file['path'] === $path; })) === 0) {
+                throw new BunnyCDNStorageException('404');
+            }
             file_put_contents($localPath, self::TEST_FILE_CONTENTS);
             return true;
         });
@@ -124,6 +136,8 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_write()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+        $adapter->delete('testing/test.txt');
+
         self::assertTrue(
             $adapter->write('testing/test.txt', 'Testing.txt', new Config())
         );
@@ -374,5 +388,24 @@ class BunnyCDNAdapterTest extends TestCase
         $filesystem = new Filesystem($adapter);
         self::assertTrue($filesystem->createDir("test"));
         self::assertTrue($filesystem->deleteDir("test"));
+    }
+
+    /**
+     * @test
+     * @return void
+     * @throws \League\Flysystem\FilesystemException
+     * @throws \League\Flysystem\FilesystemException
+     */
+    public function it_get_public_url()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject(), 'https://testing1827129361.b-cdn.net');
+
+        $this->assertEquals('https://testing1827129361.b-cdn.net/testing/test.txt', $adapter->getUrl('/testing/test.txt'));
+
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
+        $this->expectException(RuntimeException::class);
+
+        $adapter->getUrl('/testing/test.txt');
     }
 }

@@ -12,6 +12,7 @@ use League\Flysystem\Config;
 use League\Flysystem\Exception;
 use League\Flysystem\FileNotFoundException;
 use League\Flysystem\UnreadableFileException;
+use RuntimeException;
 use stdClass;
 
 class BunnyCDNAdapter extends AbstractAdapter
@@ -27,13 +28,19 @@ class BunnyCDNAdapter extends AbstractAdapter
     protected $bunnyCDNStorage;
 
     /**
-     * BunnyCDNAdapter constructor.
+     * Pull Zone URL
+     * @var string
+     */
+    private $pullzone_url;
+
+    /**
      * @param BunnyCDNStorage $bunnyCDNStorage
      */
-    public function __construct(BunnyCDNStorage $bunnyCDNStorage)
+    public function __construct(BunnyCDNStorage $bunnyCDNStorage, string $pullzone_url = '')
     {
         $this->bunnyCDNStorage = $bunnyCDNStorage;
         $this->setPathPrefix($this->bunnyCDNStorage->storageZoneName);
+        $this->pullzone_url = $pullzone_url;
     }
 
     /**
@@ -343,5 +350,19 @@ class BunnyCDNAdapter extends AbstractAdapter
     private function fullPath($path): string
     {
         return '/' . $this->applyPathPrefix('/' . Util::normalizePath($path));
+    }
+
+    /**
+     * getURL method for Laravel users who want to use BunnyCDN's PullZone to retrieve a public URL
+     * @param string $path
+     * @return string
+     */
+    public function getUrl(string $path): string
+    {
+        if($this->pullzone_url === '') {
+            throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        }
+
+        return $this->pullzone_url.'/'.ltrim($path, '/');
     }
 }
