@@ -363,6 +363,6 @@ class BunnyCDNAdapter extends AbstractAdapter
             throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         }
 
-        return $this->pullzone_url.'/'.ltrim($path, '/');
+        return rtrim($this->pullzone_url, '/').'/'.ltrim($path, '/');
     }
 }
