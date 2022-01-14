@@ -86,7 +86,7 @@ class BunnyCDNAdapterTest extends TestCase
         $mock->apiAccessKey = $apiAccessKey;
         return $mock;
 
-//        return new BunnyCDNStorage('test12391248982', 'f053a6e4-5b85-46a3-922fc6664a1e-cb04-47e0', 'de');
+        return new BunnyCDNStorage('', '', 'sg');
     }
 
     /**
@@ -134,7 +134,12 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_write()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-        $this->assertNull($adapter->write('testing/test123.txt', self::TEST_FILE_CONTENTS, new Config()));
+        try {
+            self::assertNull($adapter->delete('testing/test.txt'));
+        } catch (Exception $exception) {
+
+        }
+        $this->assertNull($adapter->write('testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
     }
 
     /**
@@ -263,6 +268,8 @@ class BunnyCDNAdapterTest extends TestCase
     /**
      * @test
      * @return void
+     * @throws Exception
+     * @throws Exception
      */
     public function it_get_size()
     {
@@ -294,6 +301,7 @@ class BunnyCDNAdapterTest extends TestCase
     /**
      * @test
      * @throws Exception
+     * @throws \League\Flysystem\FilesystemException
      */
     public function it_create_dir()
     {
@@ -331,6 +339,8 @@ class BunnyCDNAdapterTest extends TestCase
     /**
      * @test
      * @return void
+     * @throws \League\Flysystem\FilesystemException
+     * @throws \League\Flysystem\FilesystemException
      */
     public function it_get_visibility()
     {
@@ -344,6 +354,8 @@ class BunnyCDNAdapterTest extends TestCase
     /**
      * @test
      * @return void
+     * @throws \League\Flysystem\FilesystemException
+     * @throws \League\Flysystem\FilesystemException
      */
     public function it_set_visibility()
     {
@@ -352,7 +364,25 @@ class BunnyCDNAdapterTest extends TestCase
         self::expectException(\League\Flysystem\UnableToSetVisibility::class);
 
         $adapter->setVisibility('testing/test.txt', 878);
+    }
 
+    /**
+     * @test
+     * @return void
+     * @throws \League\Flysystem\FilesystemException
+     * @throws \League\Flysystem\FilesystemException
+     */
+    public function it_get_public_url()
+    {
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject(), 'https://testing1827129361.b-cdn.net');
+
+        $this->assertEquals('https://testing1827129361.b-cdn.net/testing/test.txt', $adapter->getUrl('/testing/test.txt'));
+
+        $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
+
+        $this->expectException(RuntimeException::class);
+
+        $adapter->getUrl('/testing/test.txt');
     }
 
 }

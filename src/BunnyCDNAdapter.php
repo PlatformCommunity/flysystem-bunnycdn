@@ -20,6 +20,7 @@ use League\Flysystem\UnableToSetVisibility;
 use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\UnixVisibility\PortableVisibilityConverter;
 use League\Flysystem\Visibility;
+use RuntimeException;
 use stdClass;
 use League\Flysystem\PathPrefixer;
 
@@ -41,13 +42,20 @@ class BunnyCDNAdapter implements FilesystemAdapter
     private $prefixer;
 
     /**
-     * BunnyCDNAdapter constructor.
-     * @param BunnyCDNStorage $bunnyCDNStorage
+     * Pull Zone URL
+     * @var string
      */
-    public function __construct(BunnyCDNStorage $bunnyCDNStorage)
+    private $pullzone_url;
+
+    /**
+     * @param BunnyCDNStorage $bunnyCDNStorage
+     * @param string $pullzone_url
+     */
+    public function __construct(BunnyCDNStorage $bunnyCDNStorage, string $pullzone_url = '')
     {
         $this->bunnyCDNStorage = $bunnyCDNStorage;
         $this->prefixer = new PathPrefixer($this->bunnyCDNStorage->storageZoneName);
+        $this->pullzone_url = $pullzone_url;
     }
 
     /**
@@ -210,15 +218,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
 
     /**
      * @param $path
-     * @return array
-     */
-    public function getMetadata($path): array
-    {
-        return $this->normalizeObject($this->getObject($path));
-    }
-
-    /**
-     * @param $path
      * @return string
      */
     private function fullPath($path): string
@@ -375,5 +374,19 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         $this->write($destination, $this->read($source), new Config());
         $this->delete($source);
+    }
+
+    /**
+     * getURL method for Laravel users who want to use BunnyCDN's PullZone to retrieve a public URL
+     * @param string $path
+     * @return string
+     */
+    public function getUrl(string $path): string
+    {
+        if($this->pullzone_url === '') {
+            throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        }
+
+        return $this->pullzone_url.'/'.ltrim($path, '/');
     }
 }
