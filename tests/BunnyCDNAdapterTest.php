@@ -189,8 +189,7 @@ class BunnyCDNAdapterTest extends TestCase
     public function it_read()
     {
         $adapter = new BunnyCDNAdapter($this->getBunnyCDNMockObject());
-
-        print_r($adapter->read('/testing/test.txt'));
+        
         self::assertEquals(
             self::TEST_FILE_CONTENTS,
             $adapter->read('/testing/test.txt')
