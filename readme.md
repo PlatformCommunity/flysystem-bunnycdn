@@ -47,7 +47,7 @@ $client = new BunnyCDNAdapter(
 $filesystem = new Filesystem($client);
 ```
 
-_Note: You can also use your own domain name if it's configured in the storage zone._
+_Note: You can also use your own domain name if it's configured in the pull zone._
 
 Once you add your pull zone, you can use the `->getUrl($path)`, or in Laravel, the `->url($path)` command to get the fully qualified public URL of your BunnyCDN assets.
 
