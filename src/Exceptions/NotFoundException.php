@@ -2,7 +2,7 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Exceptions;
 
-class NotFoundException extends \Exception
+class NotFoundException extends BunnyCDNException
 {
 
 }

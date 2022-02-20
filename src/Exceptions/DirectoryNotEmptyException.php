@@ -2,7 +2,7 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Exceptions;
 
-class DirectoryNotEmptyException extends \Exception
+class DirectoryNotEmptyException extends BunnyCDNException
 {
 
 }

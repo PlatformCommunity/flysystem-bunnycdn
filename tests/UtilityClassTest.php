@@ -2,6 +2,7 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
+use Exception;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 

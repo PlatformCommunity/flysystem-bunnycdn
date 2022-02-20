@@ -17,7 +17,8 @@
         "phpunit/phpunit": "@stable",
         "mockery/mockery": "^1.3",
         "league/flysystem-adapter-test-utilities": "^3",
-        "league/flysystem-memory": "^3.0"
+        "league/flysystem-memory": "^3.0",
+        "fzaninotto/faker": "^1.5"
     },
     "autoload-dev": {
         "psr-4": {
