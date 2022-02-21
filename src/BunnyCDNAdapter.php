@@ -2,8 +2,6 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
-use BunnyCDN\Storage\BunnyCDNStorage;
-use BunnyCDN\Storage\Exceptions\BunnyCDNStorageException;
 use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use League\Flysystem\Adapter\Polyfill\StreamedCopyTrait;
@@ -12,6 +10,7 @@ use League\Flysystem\Config;
 use League\Flysystem\Exception;
 use League\Flysystem\FileNotFoundException;
 use League\Flysystem\UnreadableFileException;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use RuntimeException;
 use stdClass;
 
@@ -22,24 +21,23 @@ class BunnyCDNAdapter extends AbstractAdapter
     use StreamedTrait;
 
     /**
-     * The BunnyCDN Storage Container
-     * @var BunnyCDNStorage
-     */
-    protected $bunnyCDNStorage;
-
-    /**
      * Pull Zone URL
      * @var string
      */
     private $pullzone_url;
 
     /**
-     * @param BunnyCDNStorage $bunnyCDNStorage
+     * @var BunnyCDNClient
      */
-    public function __construct(BunnyCDNStorage $bunnyCDNStorage, string $pullzone_url = '')
+    private $client;
+
+    /**
+     * @param BunnyCDNClient $client
+     * @param string $pullzone_url
+     */
+    public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
     {
-        $this->bunnyCDNStorage = $bunnyCDNStorage;
-        $this->setPathPrefix($this->bunnyCDNStorage->storageZoneName);
+        $this->client = $client;
         $this->pullzone_url = $pullzone_url;
     }
 
@@ -51,22 +49,11 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function write($path, $contents, Config $config)
     {
-        $temp_pointer = tmpfile();
-        fwrite($temp_pointer, $contents);
-
-        /** @var string $url */
-        $url = stream_get_meta_data($temp_pointer)['uri'];
-
         try {
-            $this->bunnyCDNStorage->uploadFile(
-                $url,
-                $this->fullPath($path)
-            );
-        // @codeCoverageIgnoreStart
-        } catch (BunnyCDNStorageException $e) {
+            $this->client->upload($path, $contents);
+        } catch (Exceptions\BunnyCDNException $e) {
             return false;
         }
-        // @codeCoverageIgnoreEnd
 
         return true;
     }
@@ -75,7 +62,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $path
      * @param string $contents
      * @param Config $config
-     * @return array|bool|false
+     * @return bool|false
      */
     public function update($path, $contents, Config $config)
     {
@@ -86,25 +73,32 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $path
      * @param string $newpath
      * @return bool
-     * @throws Exception
-     * @throws BunnyCDNStorageException
      */
     public function rename($path, $newpath)
     {
-        $this->write($newpath, $this->read($path)['contents'], new Config());
-        return $this->delete($path);
+        try {
+            $this->copy($path, $newpath);
+            $this->delete($path);
+        } catch (BunnyCDNException $e) {
+            return false;
+        }
+        return true;
     }
 
     /**
      * @param string $path
      * @param string $newpath
      * @return bool
-     * @throws Exception
-     * @throws BunnyCDNStorageException
      */
     public function copy($path, $newpath)
     {
-        return $this->write($newpath, $this->read($path)['contents'], new Config());
+        try {
+            $this->write($newpath, $this->read($path)['contents'], new Config());
+        } catch (BunnyCDNException $exception) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -114,31 +108,29 @@ class BunnyCDNAdapter extends AbstractAdapter
     public function delete($path)
     {
         try {
-            return (bool)$this->bunnyCDNStorage->deleteObject(
-                $this->fullPath($path)
-            );
-        // @codeCoverageIgnoreStart
-        } catch (BunnyCDNStorageException $e) {
-            return false;
+            $this->client->delete($path);
+        } catch (Exceptions\BunnyCDNException $e) {
+            if(strpos($e->getMessage(), '404') === False) { # Urgh
+                return false;
+            }
         }
-        // @codeCoverageIgnoreEnd
+        return true;
     }
 
     /**
      * @param string $dirname
-     * @return bool|void
+     * @return bool
      */
     public function deleteDir($dirname)
     {
         try {
-            return (bool)$this->bunnyCDNStorage->deleteObject(
-                rtrim($this->fullPath($dirname), '/').'/'
+            $this->client->delete(
+                rtrim($dirname, '/') . '/'
             );
-        // @codeCoverageIgnoreStart
-        } catch (BunnyCDNStorageException $e) {
+        } catch (Exceptions\BunnyCDNException $e) {
             return false;
         }
-        // @codeCoverageIgnoreEnd
+        return true;
     }
 
     /**
@@ -148,23 +140,14 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function createDir($dirname, Config $config)
     {
-        $temp_pointer = tmpfile();
-        fwrite($temp_pointer, '', 0);
-
-        /** @var string $url */
-        $url = stream_get_meta_data($temp_pointer)['uri'];
-
         try {
-            $this->bunnyCDNStorage->uploadFile(
-                $url,
-                rtrim($this->fullPath($dirname), '/').'/'
-            );
-        // @codeCoverageIgnoreStart
-        } catch (BunnyCDNStorageException $e) {
-            return false;
+            $this->client->make_directory($dirname);
+        } catch (Exceptions\BunnyCDNException $e) {
+            # Lol apparently this is "idempotent" but there's an exception... Sure whatever..
+            if ($e->getMessage() !== 'Directory already exists') {
+                return false;
+            }
         }
-        // @codeCoverageIgnoreEnd
-
         return true;
     }
 
@@ -174,144 +157,113 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function has($path)
     {
-        try {
-            $file = Util::splitPathIntoDirectoryAndFile($path)['file'];
-            $directory = Util::splitPathIntoDirectoryAndFile($path)['dir'];
-
-            return count(array_filter($this->bunnyCDNStorage->getStorageObjects(
-                    $this->fullPath($directory)
-                ), function ($value) use ($file, $directory) {
-                    return $value->Path . $value->ObjectName === $this->fullPath($directory . '/' . $file);
-                }, ARRAY_FILTER_USE_BOTH)) === 1;
-        // @codeCoverageIgnoreStart
-        } catch (BunnyCDNStorageException $e) {
-            return false;
-        }
-        // @codeCoverageIgnoreEnd
+        return $this->getMetadata($path) !== false;
     }
 
     /**
      * @param string $path
      * @return array|bool
-     * @throws Exception
-     * @throws BunnyCDNStorageException
      */
     public function read($path)
     {
-        $temp_pointer = tmpfile();
-
         try {
-            $this->bunnyCDNStorage->downloadFile(
-                $this->fullPath($path),
-                stream_get_meta_data($temp_pointer)['uri']
-            );
-        // @codeCoverageIgnoreStart
-        } catch (BunnyCDNStorageException $e) {
+            return array_merge($this->getMetadata($path) ? $this->getMetadata($path) : [], [
+                'contents' => $this->client->download($path)
+            ]);
+        } catch (Exceptions\BunnyCDNException $e) {
             return false;
         }
-        // @codeCoverageIgnoreEnd
-
-        $data = $this->getMetadata($path);
-        $data['contents'] = (string) file_get_contents(stream_get_meta_data($temp_pointer)['uri']);
-
-        return $data;
     }
 
     /**
      * @param string $directory
      * @param bool $recursive
-     * @return array|mixed
-     * @throws BunnyCDNStorageException
+     * @return array|false
      */
     public function listContents($directory = '', $recursive = false)
     {
-        $entries = array_map(function($file) {
-            return $this->normalizeObject($file);
-        }, $this->bunnyCDNStorage->getStorageObjects(
-            $this->fullPath($directory)
-        ));
-
-        return array_filter($entries);
+        try {
+            return array_map(function($item) {
+                return $this->normalizeObject($item);
+            }, $this->client->list($directory));
+        } catch (Exceptions\BunnyCDNException $e) {
+            return false;
+        }
     }
 
     /**
      * @param $path
      * @return mixed
-     * @throws UnreadableFileException
-     * @throws FileNotFoundException
-     * @throws BunnyCDNStorageException
      */
     protected function getObject($path)
     {
-        $file = Util::splitPathIntoDirectoryAndFile($path)['file'];
-        $directory = Util::splitPathIntoDirectoryAndFile($path)['dir'];
-
-        $files = array_filter($this->bunnyCDNStorage->getStorageObjects(
-            $this->fullPath($directory)
-        ), function ($value) use ($file, $directory) {
-            return $value->Path . $value->ObjectName === $this->fullPath($directory . '/' . $file);
-        }, ARRAY_FILTER_USE_BOTH);
-
-        // Check that the path isn't returning more than one file / folder
-        if (count($files) > 1) {
-            // @codeCoverageIgnoreStart
-            throw new UnreadableFileException('More than one file was returned for path:"' . $path . '", contact package author.');
-            // @codeCoverageIgnoreEnd
-        }
-
-        // Check 404
-        if (count($files) === 0) {
-            // @codeCoverageIgnoreStart
-            throw new FileNotFoundException('Could not find file: "' . $path . '".');
-            // @codeCoverageIgnoreEnd
-        }
-
-        return array_values($files)[0];
     }
 
     /**
-     * {@inheritdoc}
+     * @param array $bunny_file_array
+     * @return array
      */
-    protected function normalizeObject(stdClass $fileObject)
+    protected function normalizeObject(array $bunny_file_array): array
     {
         return [
-            'type'      => $fileObject->IsDirectory ? 'dir' : 'file',
-            'dirname'   => trim($this->removePathPrefix($fileObject->Path), "/"),
-            'mimetype'  => '',
-            'guid' => $fileObject->Guid,
-            'path'      => Util::normalizePath($this->removePathPrefix($fileObject->Path) . $fileObject->ObjectName),
-            'object_name' => $fileObject->ObjectName,
-            'size'      => $fileObject->Length,
-            'timestamp' => strtotime($fileObject->LastChanged),
-            'server_id' => $fileObject->ServerId,
-            'user_id' => $fileObject->UserId,
-            'last_changed' => $fileObject->LastChanged,
-            'date_created' => $fileObject->DateCreated,
-            'storage_zone_name' => $fileObject->StorageZoneName,
-            'storage_zone_id' => $fileObject->StorageZoneId,
-            'checksum' => $fileObject->Checksum,
-            'replicated_zones' => $fileObject->ReplicatedZones,
+            'type'      => $bunny_file_array['IsDirectory'] ? 'dir' : 'file',
+            'dirname'   => Util::normalizePath(
+                str_replace(
+                    $bunny_file_array['StorageZoneName'] . '/',
+                    '/',
+                    $bunny_file_array['Path']
+                )
+            ),
+            'mimetype'  => $bunny_file_array['ContentType'],
+            'guid' => $bunny_file_array['Guid'],
+            'path'      => '/'.Util::normalizePath(
+                str_replace(
+                    $bunny_file_array['StorageZoneName'] . '/',
+                    '/',
+                    $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
+                )
+            ),
+            'object_name' => $bunny_file_array['ObjectName'],
+            'size'      => $bunny_file_array['Length'],
+            'timestamp' => date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['LastChanged'].'000')->getTimestamp(),
+            'server_id' => $bunny_file_array['ServerId'],
+            'user_id' => $bunny_file_array['UserId'],
+            'last_changed' => date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['LastChanged'].'000')->getTimestamp(),
+            'date_created' => date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['DateCreated'].'000')->getTimestamp(),
+            'storage_zone_name' => $bunny_file_array['StorageZoneName'],
+            'storage_zone_id' => $bunny_file_array['StorageZoneId'],
+            'checksum' => $bunny_file_array['Checksum'],
+            'replicated_zones' => $bunny_file_array['ReplicatedZones'],
         ];
     }
 
     /**
+     * Returns a normalised Flysystem Metadata Array
+     * * array_values is called because array_filter sometimes doesn't start the array at 1
+     *
      * @param string $path
      * @return array|false
-     * @throws BunnyCDNStorageException
-     * @throws FileNotFoundException
-     * @throws UnreadableFileException
      */
     public function getMetadata($path)
     {
-        return $this->normalizeObject($this->getObject($path));
+        $list = array_values(array_filter($this->listContents(
+            Util::splitPathIntoDirectoryAndFile(
+                Util::normalizePath($path)
+            )['dir']
+        ), function($item) use ($path) {
+            return Util::normalizePath($item['path']) === Util::normalizePath($path);
+        }));
+
+        if (count($list) === 1) {
+            return $list[0];
+        } else {
+            return false;
+        }
     }
 
     /**
      * @param string $path
-     * @return array|false
-     * @throws BunnyCDNStorageException
-     * @throws FileNotFoundException
-     * @throws UnreadableFileException
+     * @return array
      */
     public function getSize($path)
     {
@@ -322,9 +274,6 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @codeCoverageIgnore
      * @param string $path
      * @return array
-     * @throws BunnyCDNStorageException
-     * @throws FileNotFoundException
-     * @throws UnreadableFileException
      */
     public function getMimetype($path)
     {
@@ -334,22 +283,10 @@ class BunnyCDNAdapter extends AbstractAdapter
     /**
      * @param string $path
      * @return array
-     * @throws BunnyCDNStorageException
-     * @throws FileNotFoundException
-     * @throws UnreadableFileException
      */
     public function getTimestamp($path)
     {
         return $this->getMetadata($path);
-    }
-
-    /**
-     * @param $path
-     * @return string
-     */
-    private function fullPath($path): string
-    {
-        return '/' . $this->applyPathPrefix('/' . Util::normalizePath($path));
     }
 
     /**
@@ -359,10 +296,10 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function getUrl(string $path): string
     {
-        if($this->pullzone_url === '') {
+        if ($this->pullzone_url === '') {
             throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         }
 
-        return rtrim($this->pullzone_url, '/').'/'.ltrim($path, '/');
+        return rtrim($this->pullzone_url, '/') . '/' . ltrim($path, '/');
     }
 }
