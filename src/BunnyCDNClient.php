@@ -10,21 +10,30 @@ use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 class BunnyCDNClient
 {
-    const BASE_URL = 'https://storage.bunnycdn.com/';
-
     public string $storage_zone_name;
     private string $api_key;
     private string $region;
 
     public Guzzle $client;
 
-    public function __construct(string $storage_zone_name, string $api_key, string $region = '')
+    public function __construct(string $storage_zone_name, string $api_key, string $region = BunnyCDNRegion::FALKENSTEIN)
     {
         $this->storage_zone_name = $storage_zone_name;
         $this->api_key = $api_key;
         $this->region = $region;
 
         $this->client = new Guzzle();
+    }
+
+    private static function get_base_url($region): string
+    {
+        return match($region) {
+            'ny' => 'https://ny.storage.bunnycdn.com/',
+            'la' => 'https://la.storage.bunnycdn.com/',
+            'sg' => 'https://sg.storage.bunnycdn.com/',
+            'syd' => 'https://syd.storage.bunnycdn.com/',
+            default => 'https://storage.bunnycdn.com/'
+        };
     }
 
     /**
@@ -34,7 +43,7 @@ class BunnyCDNClient
     {
         $response = $this->client->request(
             $method,
-            self::BASE_URL . Util::normalizePath('/' . $this->storage_zone_name . '/').$path,
+            self::get_base_url($this->region) . Util::normalizePath('/' . $this->storage_zone_name . '/').$path,
             array_merge_recursive([
                 'headers' => [
                     'Accept' => '*/*',

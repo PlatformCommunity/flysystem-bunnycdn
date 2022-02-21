@@ -2,8 +2,6 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
-
-use BunnyCDN\Storage\BunnyCDNStorage;
 use Faker\Provider\File;
 use GuzzleHttp\Psr7\Response;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
@@ -17,7 +15,6 @@ use League\Flysystem\StorageAttributes;
 use League\Flysystem\Visibility;
 use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
-use BunnyCDN\Storage\Exceptions\BunnyCDNStorageException;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
