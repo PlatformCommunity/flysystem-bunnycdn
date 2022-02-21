@@ -1,8 +1,10 @@
 <?php
 
+namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
-use PlatformCommunity\Flysystem\BunnyCDN\Util;
+use Exception;
 use PHPUnit\Framework\TestCase;
+use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class UtilityClassTest extends TestCase
 {
@@ -47,18 +49,18 @@ class UtilityClassTest extends TestCase
     public function it_tests_normalize_path()
     {
         $this->assertEquals(
-            Util::normalizePath('/test/', true),
-            'test/'
+            'test/',
+            Util::normalizePath('/test/', true)
         );
 
         $this->assertEquals(
-            Util::normalizePath('/test', true),
-            'test/'
+            'test/',
+            Util::normalizePath('/test', true)
         );
 
         $this->assertEquals(
-            Util::normalizePath('/test', false),
-            'test'
+            'test',
+            Util::normalizePath('/test', false)
         );
     }
 
@@ -69,35 +71,43 @@ class UtilityClassTest extends TestCase
     public function it_path_split()
     {
         $this->assertEquals(
-            Util::splitPathIntoDirectoryAndFile('/testing-dir'),
             [
                 'file' => 'testing-dir',
                 'dir' => '',
-            ]
+            ],
+            Util::splitPathIntoDirectoryAndFile('/testing-dir')
         );
 
         $this->assertEquals(
-            Util::splitPathIntoDirectoryAndFile('/testing-dir/'),
+            [
+                'file' => 'testing.txt',
+                'dir' => '',
+            ],
+            Util::splitPathIntoDirectoryAndFile('/testing.txt')
+        );
+
+        $this->assertEquals(
             [
                 'file' => 'testing-dir',
                 'dir' => '',
-            ]
+            ],
+            Util::splitPathIntoDirectoryAndFile('/testing-dir/')
         );
 
         $this->assertEquals(
-            Util::splitPathIntoDirectoryAndFile('/testing-dir/file.txt'),
             [
                 'file' => 'file.txt',
                 'dir' => '/testing-dir',
-            ]
+            ],
+            Util::splitPathIntoDirectoryAndFile('/testing-dir/file.txt')
         );
 
         $this->assertEquals(
-            Util::splitPathIntoDirectoryAndFile('/testing-dir/nested/file.txt'),
             [
                 'file' => 'file.txt',
                 'dir' => '/testing-dir/nested',
-            ]
+            ],
+            Util::splitPathIntoDirectoryAndFile('/testing-dir/nested/file.txt')
         );
     }
 }
