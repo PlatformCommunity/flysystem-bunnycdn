@@ -33,12 +33,12 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * Pull Zone URL
      * @var string
      */
-    private string $pullzone_url;
+    private $pullzone_url;
 
     /**
      * @var BunnyCDNClient
      */
-    private BunnyCDNClient $client;
+    private $client;
 
     /**
      * @param BunnyCDNClient $client
@@ -124,8 +124,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     protected function normalizeObject(array $bunny_file_array): StorageAttributes
     {
-        return match ($bunny_file_array['IsDirectory']) {
-            true => new DirectoryAttributes(
+        if ($bunny_file_array['IsDirectory']) {
+            return new DirectoryAttributes(
                 Util::normalizePath(
                     str_replace(
                         $bunny_file_array['StorageZoneName'] . '/',
@@ -133,8 +133,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
                         $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
                     )
                 )
-            ),
-            false => new FileAttributes(
+            );
+        } else {
+            return new FileAttributes(
                 Util::normalizePath(
                     str_replace(
                         $bunny_file_array['StorageZoneName'] . '/',
@@ -147,8 +148,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
                 date_create_from_format('Y-m-d\TH:i:s.v', $bunny_file_array['LastChanged'])->getTimestamp(),
                 $bunny_file_array['ContentType'],
                 $this->extractExtraMetadata($bunny_file_array)
-            )
-        };
+            );
+        }
     }
 
     /**
@@ -224,10 +225,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
             $this->client->make_directory($path);
         } catch (Exceptions\BunnyCDNException $e) {
             # Lol apparently this is "idempotent" but there's an exception... Sure whatever..
-            match ($e->getMessage()) {
-                'Directory already exists' => "",
-                default => throw UnableToCreateDirectory::atLocation($path, $e->getMessage())
-            };
+            if ($e->getMessage() !== 'Directory already exists') {
+                throw UnableToCreateDirectory::atLocation($path, $e->getMessage());
+            }
         }
 
     }
@@ -352,16 +352,13 @@ class BunnyCDNAdapter implements FilesystemAdapter
         try {
             $this->client->delete($path);
         } catch (Exceptions\BunnyCDNException $e) {
-            if(!str_contains($e->getMessage(), '404')) { # Urgh
+            if(strpos($e->getMessage(), '404') === False) { # Urgh
                 throw UnableToDeleteFile::atLocation($path, $e->getMessage());
             }
         }
 
     }
 
-    /**
-     * @throws UnableToCheckExistence
-     */
     public function directoryExists(string $path): bool
     {
         return $this->fileExists($path);

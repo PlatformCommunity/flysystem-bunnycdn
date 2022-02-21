@@ -14,7 +14,7 @@ use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class MockClient extends BunnyCDNClient
 {
-    public MockHandler $mock;
+    public $mock;
 
     public function __construct(string $storage_zone_name, string $api_key, string $region = '')
     {

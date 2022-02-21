@@ -14,7 +14,7 @@ class ClientTest extends TestCase
 {
     const STORAGE_ZONE = 'example_storage_zone';
 
-    public BunnyCDNClient $client;
+    public $client;
 
     protected function setUp(): void
     {
