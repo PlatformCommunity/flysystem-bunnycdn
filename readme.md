@@ -28,11 +28,11 @@ composer require platformcommunity/flysystem-bunnycdn
 ## Usage
 
 ```php
-use BunnyCDN\Storage\BunnyCDNStorage;
+use BunnyCDN\Storage\BunnyCDNClient;
 use League\Flysystem\Filesystem;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 
-$client = new BunnyCDNAdapter(new BunnyCDNStorage('storage-zone', 'api-key', 'de'));
+$client = new BunnyCDNAdapter(new BunnyCDNClient('storage-zone', 'api-key', 'de'));
 $filesystem = new Filesystem($client);
 ```
 
@@ -42,12 +42,12 @@ To have BunnyCDN adapter publish to a public CDN location, you have to a "Pull Z
 
 
 ```php
-use BunnyCDN\Storage\BunnyCDNStorage;
+use BunnyCDN\Storage\BunnyCDNClient;
 use League\Flysystem\Filesystem;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 
 $client = new BunnyCDNAdapter(
-    new BunnyCDNStorage('storage-zone', 'api-key', 'de'),
+    new BunnyCDNClient('storage-zone', 'api-key', 'de'),
     'https://testing.b-cdn.net/'
 );
 $filesystem = new Filesystem($client);
@@ -57,12 +57,12 @@ _Note: You can also use your own domain name if it's configured in the pull zone
 
 Once you add your pull zone, you can use the `->getUrl($path)`, or in Laravel, the `->url($path)` command to get the fully qualified public URL of your BunnyCDN assets.
 
-## Usage in Laravel
+## Usage in Laravel 9
 
-To add BunnyCDN adapter as a custom storage adapter, install using the `v1` composer installer.
+To add BunnyCDN adapter as a custom storage adapter in Laravel 9, install using the `v3` composer installer.
 
 ```bash
-composer require platformcommunity/flysystem-bunnycdn "^1.0"
+composer require platformcommunity/flysystem-bunnycdn "^3.0"
 ```
 
 Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSystem knowledge of the BunnyCDN adapter.
@@ -77,7 +77,7 @@ Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSys
     {
         Storage::extend('bunnycdn', function ($app, $config) {
             $client = new BunnyCDNAdapter(
-                new BunnyCDNStorage(
+                new BunnyCDNClient(
                     $config['storage_zone'],
                     $config['api_key'],
                     $config['region']
