@@ -11,6 +11,7 @@ use League\Flysystem\Exception;
 use League\Flysystem\FileNotFoundException;
 use League\Flysystem\UnreadableFileException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use RuntimeException;
 use stdClass;
 
@@ -47,7 +48,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param Config $config
      * @return bool
      */
-    public function write($path, $contents, Config $config)
+    public function write($path, $contents, Config $config): bool
     {
         try {
             $this->client->upload($path, $contents);
@@ -64,7 +65,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param Config $config
      * @return bool|false
      */
-    public function update($path, $contents, Config $config)
+    public function update($path, $contents, Config $config): bool
     {
         return $this->write($path, $contents, $config);
     }
@@ -74,7 +75,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $newpath
      * @return bool
      */
-    public function rename($path, $newpath)
+    public function rename($path, $newpath): bool
     {
         try {
             $this->copy($path, $newpath);
@@ -90,7 +91,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $newpath
      * @return bool
      */
-    public function copy($path, $newpath)
+    public function copy($path, $newpath): bool
     {
         try {
             $this->write($newpath, $this->read($path)['contents'], new Config());
@@ -105,7 +106,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $path
      * @return bool
      */
-    public function delete($path)
+    public function delete($path): bool
     {
         try {
             $this->client->delete($path);
@@ -121,7 +122,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $dirname
      * @return bool
      */
-    public function deleteDir($dirname)
+    public function deleteDir($dirname): bool
     {
         try {
             $this->client->delete(
@@ -138,7 +139,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param Config $config
      * @return bool
      */
-    public function createDir($dirname, Config $config)
+    public function createDir($dirname, Config $config): bool
     {
         try {
             $this->client->make_directory($dirname);
@@ -154,17 +155,19 @@ class BunnyCDNAdapter extends AbstractAdapter
     /**
      * @param string $path
      * @return bool
+     * @throws BunnyCDNException
+     * @throws BunnyCDNException
      */
-    public function has($path)
+    public function has($path): bool
     {
         return $this->getMetadata($path) !== false;
     }
 
     /**
      * @param string $path
-     * @return array|bool
+     * @return bool|false
      */
-    public function read($path)
+    public function read($path): bool
     {
         try {
             return array_merge($this->getMetadata($path) ? $this->getMetadata($path) : [], [
@@ -179,6 +182,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $directory
      * @param bool $recursive
      * @return array|false
+     * @throws BunnyCDNException
      */
     public function listContents($directory = '', $recursive = false)
     {
@@ -186,14 +190,14 @@ class BunnyCDNAdapter extends AbstractAdapter
             return array_map(function($item) {
                 return $this->normalizeObject($item);
             }, $this->client->list($directory));
-        } catch (Exceptions\BunnyCDNException $e) {
+        } catch (NotFoundException $e) {
             return false;
         }
     }
 
     /**
      * @param $path
-     * @return mixed
+     * @return void
      */
     protected function getObject($path)
     {
@@ -243,6 +247,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      *
      * @param string $path
      * @return array|false
+     * @throws BunnyCDNException
      */
     public function getMetadata($path)
     {
@@ -250,7 +255,7 @@ class BunnyCDNAdapter extends AbstractAdapter
             Util::splitPathIntoDirectoryAndFile(
                 Util::normalizePath($path)
             )['dir']
-        ), function($item) use ($path) {
+        ) ?: [], function($item) use ($path) {
             return Util::normalizePath($item['path']) === Util::normalizePath($path);
         }));
 
@@ -264,6 +269,8 @@ class BunnyCDNAdapter extends AbstractAdapter
     /**
      * @param string $path
      * @return array
+     * @throws BunnyCDNException
+     * @throws BunnyCDNException
      */
     public function getSize($path)
     {
@@ -274,6 +281,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @codeCoverageIgnore
      * @param string $path
      * @return array
+     * @throws BunnyCDNException
+     * @throws BunnyCDNException
      */
     public function getMimetype($path)
     {
@@ -283,6 +292,8 @@ class BunnyCDNAdapter extends AbstractAdapter
     /**
      * @param string $path
      * @return array
+     * @throws BunnyCDNException
+     * @throws BunnyCDNException
      */
     public function getTimestamp($path)
     {

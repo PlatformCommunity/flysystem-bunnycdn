@@ -181,7 +181,6 @@ class FlysystemTestSuite extends TestCase
     {
 
         self::assertTrue($this->adapter->createDir('testing_for_deletion',  new Config()));
-        var_dump($this->adapter->listContents('/'));
         self::assertTrue($this->adapter->deleteDir('testing_for_deletion'));
     }
 
@@ -208,7 +207,7 @@ class FlysystemTestSuite extends TestCase
      * @test
      * @throws Exception
      */
-    public function it_list_contents() // TODO This is broken
+    public function it_list_contents()
     {
         $this->givenItHasFile('/testing/test.txt');
 
@@ -220,6 +219,17 @@ class FlysystemTestSuite extends TestCase
         );
         $this->assertHasMetadataKeys(
             $this->adapter->listContents('/')[0]
+        );
+    }
+
+    /**
+     * @test
+     * @throws Exception
+     */
+    public function it_list_contents_empty()
+    {
+        self::assertIsArray(
+            $this->adapter->listContents('/')
         );
     }
 
