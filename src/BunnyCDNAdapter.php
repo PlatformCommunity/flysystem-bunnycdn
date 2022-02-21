@@ -74,7 +74,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->upload($path, $contents);
-
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToWriteFile::atLocation($path, $e->getMessage());
         }

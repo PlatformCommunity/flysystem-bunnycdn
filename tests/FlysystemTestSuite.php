@@ -14,6 +14,7 @@ use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
+use League\Flysystem\Visibility;
 use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use BunnyCDN\Storage\Exceptions\BunnyCDNStorageException;
@@ -64,18 +65,85 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     /**
      * Skipped
      */
-    public function overwriting_a_file(): void { $this->markTestSkipped('Hmmmm'); }
     public function setting_visibility(): void { $this->markTestSkipped('No visibility supported'); }
     public function listing_contents_recursive(): void { $this->markTestSkipped('No recursive supported'); }
+    public function fetching_the_mime_type_of_an_svg_file(): void { $this->markTestSkipped('Mimetypes not yet supported'); }
 
-    public function test()
+
+    /**
+     * Section where Visibility needs to be fixed...
+     */
+
+    /**
+     * @test
+     */
+    public function copying_a_file(): void
     {
-        $adapter = $this->adapter();
-        $fileExistsBefore = $adapter->fileExists('some/path.txt');
-        $adapter->write('some/path.txt', 'contents', new Config());
-        $fileExistsAfter = $adapter->fileExists('some/path.txt');
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'source.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
 
-        $this->assertFalse($fileExistsBefore);
-        $this->assertTrue($fileExistsAfter);
+            $adapter->copy('source.txt', 'destination.txt', new Config());
+
+            $this->assertTrue($adapter->fileExists('source.txt'));
+            $this->assertTrue($adapter->fileExists('destination.txt'));
+            # Removed as Visibility is not supported in BunnyCDN without
+//            $this->assertEquals(Visibility::PUBLIC, $adapter->visibility('destination.txt')->visibility());
+            $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function copying_a_file_again(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'source.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            $adapter->copy('source.txt', 'destination.txt', new Config());
+
+            $this->assertTrue($adapter->fileExists('source.txt'));
+            $this->assertTrue($adapter->fileExists('destination.txt'));
+            # Removed as Visibility is not supported in BunnyCDN without
+//            $this->assertEquals(Visibility::PUBLIC, $adapter->visibility('destination.txt')->visibility());
+            $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function moving_a_file(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'source.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+            $adapter->move('source.txt', 'destination.txt', new Config());
+            $this->assertFalse(
+                $adapter->fileExists('source.txt'),
+                'After moving a file should no longer exist in the original location.'
+            );
+            $this->assertTrue(
+                $adapter->fileExists('destination.txt'),
+                'After moving, a file should be present at the new location.'
+            );
+            # Removed as Visibility is not supported in BunnyCDN without
+//            $this->assertEquals(Visibility::PUBLIC, $adapter->visibility('destination.txt')->visibility());
+            $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
+        });
     }
 }
