@@ -2,28 +2,19 @@
 
 # Flysystem Adapter for BunnyCDN Storage
 
-[![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v1?label=Flysystem%20v1&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v2?label=Flysystem%20v2&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v3?label=Flysystem%20v3&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) <br />[![Codecov](https://img.shields.io/codecov/c/github/PlatformCommunity/flysystem-bunnycdn)](https://codecov.io/gh/PlatformCommunity/flysystem-bunnycdn) [![Packagist Version](https://img.shields.io/packagist/v/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn) ![Minimum PHP Version: 7.2](https://img.shields.io/badge/php-min%207.2-important) [![Licence: MIT](https://img.shields.io/packagist/l/platformcommunity/flysystem-bunnycdn)](https://github.com/PlatformCommunity/flysystem-bunnycdn/blob/master/LICENSE) [![Downloads](https://img.shields.io/packagist/dm/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn)
+[![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v1?label=Flysystem%20v1&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v2?label=Flysystem%20v2&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v3?label=Flysystem%20v3&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) <br />[![Codecov](https://img.shields.io/codecov/c/github/PlatformCommunity/flysystem-bunnycdn)](https://codecov.io/gh/PlatformCommunity/flysystem-bunnycdn) [![Packagist Version](https://img.shields.io/packagist/v/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn) ![Minimum PHP Version: 7.4](https://img.shields.io/badge/php-min%207.4-important) [![Licence: MIT](https://img.shields.io/packagist/l/platformcommunity/flysystem-bunnycdn)](https://github.com/PlatformCommunity/flysystem-bunnycdn/blob/master/LICENSE) [![Downloads](https://img.shields.io/packagist/dm/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn)
+
+## ⚠️ Note – Breaking Change 
+
+> ⚠️ (21/Feb/22) As the upstream BunnyCDNStorage client has gone sometime without an update, it's become unsustainable to continue to use. For all updates, simply change the `BunnyCDNStorage` to `BunnyCDNClient` and re-import. ⚠️
 
 ## Installation
 
-For **Flysystem v1**, use the v1 version of `flysystem-bunnycdn`.
+To install `flysystem-bunnycdn`, require the package with no version constraint. This should match the `flysystem-bunnycdn` version with your version of FlySystem (v1, v2, v3 etc).
 
 ```bash
-composer require platformcommunity/flysystem-bunnycdn "^1.0"
+composer require platformcommunity/flysystem-bunnycdn "*"
 ```
-
-For **Flysystem v2**, use the v2 version of `flysystem-bunnycdn`.
-
-```bash
-composer require platformcommunity/flysystem-bunnycdn "^2.0"
-```
-
-For **Flysystem v3**, use the v3 version of `flysystem-bunnycdn`.
-
-```bash
-composer require platformcommunity/flysystem-bunnycdn "^3.0"
-```
-
 
 ## Usage
 
