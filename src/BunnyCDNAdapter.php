@@ -272,6 +272,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
                 throw new UnableToRetrieveMetadata('Unknown Mimetype');
             }
 
+            return $object;
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
         }
