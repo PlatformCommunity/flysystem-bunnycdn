@@ -9,9 +9,7 @@ use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\InvalidVisibilityProvided;
-use League\Flysystem\PathPrefixer;
 use League\Flysystem\StorageAttributes;
-use League\Flysystem\UnableToCheckExistence;
 use League\Flysystem\UnableToCopyFile;
 use League\Flysystem\UnableToCreateDirectory;
 use League\Flysystem\UnableToDeleteDirectory;
@@ -23,8 +21,7 @@ use League\Flysystem\UnableToSetVisibility;
 use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\Visibility;
 use RuntimeException;
-use stdClass;
-use function PHPUnit\Framework\stringContains;
+
 
 class BunnyCDNAdapter implements FilesystemAdapter
 {
@@ -357,11 +354,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
             }
         }
 
-    }
-
-    public function directoryExists(string $path): bool
-    {
-        return $this->fileExists($path);
     }
 
     /**
