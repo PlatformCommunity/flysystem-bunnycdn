@@ -165,9 +165,10 @@ class BunnyCDNAdapter extends AbstractAdapter
 
     /**
      * @param string $path
-     * @return bool|false
+     * @return array|false
+     * @noinspection PhpReturnDocTypeMismatchInspection
      */
-    public function read($path): bool
+    public function read($path)
     {
         try {
             return array_merge($this->getMetadata($path) ? $this->getMetadata($path) : [], [
