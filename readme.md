@@ -6,22 +6,10 @@
 
 ## Installation
 
-For **Flysystem v1**, use the v1 version of `flysystem-bunnycdn`.
+To install `flysystem-bunnycdn`, require the package with no version constraint. This should match the `flysystem-bunnycdn` version with your version of FlySystem (v1, v2, v3 etc).
 
 ```bash
-composer require platformcommunity/flysystem-bunnycdn "^1.0"
-```
-
-For **Flysystem v2**, use the v2 version of `flysystem-bunnycdn`.
-
-```bash
-composer require platformcommunity/flysystem-bunnycdn "^2.0"
-```
-
-For **Flysystem v3**, use the v3 version of `flysystem-bunnycdn`.
-
-```bash
-composer require platformcommunity/flysystem-bunnycdn "^3.0"
+composer require platformcommunity/flysystem-bunnycdn "*"
 ```
 
 
