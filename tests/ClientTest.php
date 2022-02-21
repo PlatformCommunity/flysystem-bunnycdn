@@ -18,7 +18,7 @@ class ClientTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->client = new MockClient(self::STORAGE_ZONE, 'b0e98a1b-d62d-4c31-aae0df94bbf6-1592-4f66');
+        $this->client = new MockClient(self::STORAGE_ZONE, 'api-key');
     }
 
     public function test_listing_directory()
@@ -144,6 +144,6 @@ class ClientTest extends TestCase
             );
         }
 
-        $this->client->delete('/testin.txt');
+        $this->client->delete('/test.txt');
     }
 }

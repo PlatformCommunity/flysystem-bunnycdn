@@ -159,9 +159,9 @@ class BunnyCDNClient
         try {
             return $this->request($path, 'DELETE');
         } catch (GuzzleException $e) {
-            if($e->getCode() === 400) {
+            if($e->getCode() === 404) {
                 throw new NotFoundException($e->getMessage());
-            } elseif($e->getCode() === 404) {
+            } elseif($e->getCode() === 400) {
                 throw new DirectoryNotEmptyException($e->getMessage());
             } else {
                 throw new BunnyCDNException($e->getMessage());
