@@ -48,7 +48,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         $this->client = $client;
         $this->pullzone_url = $pullzone_url;
-        // TODO Pull Zone
     }
 
     /**
@@ -353,7 +352,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
         try {
             $this->client->delete($path);
         } catch (Exceptions\BunnyCDNException $e) {
-            if(!str_contains($e->getMessage(), '404')) { # Uehghgh
+            if(!str_contains($e->getMessage(), '404')) { # Urgh
                 throw UnableToDeleteFile::atLocation($path, $e->getMessage());
             }
         }
