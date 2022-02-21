@@ -24,6 +24,7 @@ use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\Visibility;
 use RuntimeException;
 use stdClass;
+use function PHPUnit\Framework\stringContains;
 
 class BunnyCDNAdapter implements FilesystemAdapter
 {
@@ -144,7 +145,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
                 ),
                 $bunny_file_array['Length'],
                 Visibility::PUBLIC,
-                date_create_from_format('Y-m-d\TH:i:s:v', $bunny_file_array['LastChanged'])->getTimestamp(),
+                date_create_from_format('Y-m-d\TH:i:s.v', $bunny_file_array['LastChanged'])->getTimestamp(),
                 $bunny_file_array['ContentType'],
                 $this->extractExtraMetadata($bunny_file_array)
             )
@@ -162,7 +163,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             'dirname'   => Util::splitPathIntoDirectoryAndFile($bunny_file_array['Path'])['dir'],
             'guid' => $bunny_file_array['Guid'],
             'object_name' => $bunny_file_array['ObjectName'],
-            'timestamp' => date_create_from_format('Y-m-d\TH:i:s:v', $bunny_file_array['LastChanged'])->getTimestamp(),
+            'timestamp' => date_create_from_format('Y-m-d\TH:i:s.v', $bunny_file_array['LastChanged'])->getTimestamp(),
             'server_id' => $bunny_file_array['ServerId'],
             'user_id' => $bunny_file_array['UserId'],
             'date_created' => $bunny_file_array['DateCreated'],
@@ -223,7 +224,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
         try {
             $this->client->make_directory($path);
         } catch (Exceptions\BunnyCDNException $e) {
-            throw UnableToCreateDirectory::atLocation($path, $e->getMessage());
+            # Lol apparently this is "idempotent" but there's an exception... Sure whatever..
+            match ($e->getMessage()) {
+                'Directory already exists' => "",
+                default => throw UnableToCreateDirectory::atLocation($path, $e->getMessage())
+            };
         }
 
     }
@@ -347,7 +352,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
         try {
             $this->client->delete($path);
         } catch (Exceptions\BunnyCDNException $e) {
-            throw UnableToDeleteFile::atLocation($path, $e->getMessage());
+            if(!str_contains($e->getMessage(), '404')) { # Uehghgh
+                throw UnableToDeleteFile::atLocation($path, $e->getMessage());
+            }
         }
 
     }

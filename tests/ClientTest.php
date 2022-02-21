@@ -12,7 +12,7 @@ use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 class ClientTest extends TestCase
 {
-    const STORAGE_ZONE = 'testing1827129361';
+    const STORAGE_ZONE = 'example_storage_zone';
 
     public BunnyCDNClient|MockClient $client;
 
@@ -38,11 +38,6 @@ class ClientTest extends TestCase
 
         $this->assertIsArray($response);
         $this->assertCount(2, $response);
-
-        foreach ($response as $object) {
-//            $this->assertStringNotContainsStringIgnoringCase(self::STORAGE_ZONE, $object['Path']);
-//            $this->assertEquals('/', $object['Path']);
-        }
     }
 
     public function test_listing_subdirectory()
@@ -61,11 +56,6 @@ class ClientTest extends TestCase
 
         $this->assertIsArray($response);
         $this->assertCount(1, $response);
-
-        foreach ($response as $object) {
-//            $this->assertStringNotContainsStringIgnoringCase(self::STORAGE_ZONE, $object['Path']);
-//            $this->assertEquals('/subfolder/', $object['Path']);
-        }
     }
 
     public function test_download_file()

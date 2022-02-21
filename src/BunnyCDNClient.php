@@ -34,7 +34,7 @@ class BunnyCDNClient
     {
         $response = $this->client->request(
             $method,
-            self::BASE_URL . Util::normalizePath('/' . $this->storage_zone_name . '/'. $path),
+            self::BASE_URL . Util::normalizePath('/' . $this->storage_zone_name . '/').$path,
             array_merge_recursive([
                 'headers' => [
                     'Accept' => '*/*',
@@ -56,7 +56,7 @@ class BunnyCDNClient
     public function list(string $path): array
     {
         try {
-            $listing = $this->request($path);
+            $listing = $this->request(Util::normalizePath($path).'/');
 
             # Throw an exception if we don't get back an array
             if(!is_array($listing)) { throw new NotFoundException('File is not a directory'); }
@@ -115,18 +115,16 @@ class BunnyCDNClient
 
     /**
      * @param string $path
-     * @param $contents
      * @return mixed
      * @throws BunnyCDNException
      */
     public function make_directory(string $path): mixed
     {
         try {
-            return $this->request($path, 'PUT', [
+            return $this->request(Util::normalizePath($path).'/', 'PUT', [
                 'headers' => [
-                    'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Content-Length' => 0
                 ],
-                'body' => ''
             ]);
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
