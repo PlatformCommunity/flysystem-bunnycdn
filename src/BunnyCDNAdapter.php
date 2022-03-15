@@ -191,7 +191,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     public function readStream($path)
     {
         /** @var resource $readStream */
-        $readStream = fopen('data://text/plain,' . $this->read($path),'r');
+        $readStream = fopen('data:text/plain;base64,' . base64_encode($this->read($path)),'r');
 
         rewind($readStream);
 
