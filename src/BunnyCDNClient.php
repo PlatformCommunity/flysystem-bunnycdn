@@ -32,6 +32,7 @@ class BunnyCDNClient
             'la' => 'https://la.storage.bunnycdn.com/',
             'sg' => 'https://sg.storage.bunnycdn.com/',
             'syd' => 'https://syd.storage.bunnycdn.com/',
+            'uk' => 'https://uk.storage.bunnycdn.com/',
             default => 'https://storage.bunnycdn.com/'
         };
     }

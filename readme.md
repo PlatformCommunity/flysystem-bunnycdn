@@ -80,6 +80,7 @@ BunnyCDNRegion::NEW_YORK = 'ny';
 BunnyCDNRegion::LOS_ANGELAS = 'la';
 BunnyCDNRegion::SINGAPORE = 'sg';
 BunnyCDNRegion::SYDNEY = 'syd';
+BuunyCDNRegion::UNITED_KINGDOM = 'uk';
 ```
 
 ## Contributing

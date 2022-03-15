@@ -9,4 +9,5 @@ class BunnyCDNRegion
     public const LOS_ANGELAS = 'la';
     public const SINGAPORE = 'sg';
     public const SYDNEY = 'syd';
+    public const UNITED_KINGDOM = 'uk';
 }
