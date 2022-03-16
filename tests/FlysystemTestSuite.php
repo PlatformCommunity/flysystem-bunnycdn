@@ -10,6 +10,7 @@ use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
+use League\Flysystem\FilesystemException;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
 use League\Flysystem\Visibility;
@@ -17,12 +18,13 @@ use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
+use Throwable;
 
 class FlysystemTestSuite extends FilesystemAdapterTestCase
 {
     const STORAGE_ZONE = 'testing_storage_zone';
 
-    protected static function createFilesystemAdapter(): FilesystemAdapter
+    public static function createFilesystemAdapter(): FilesystemAdapter
     {
         $filesystem = new Filesystem(new InMemoryFilesystemAdapter());
 
@@ -40,6 +42,10 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
         $mock_client->shouldReceive('download')->andReturnUsing(function($path) use ($filesystem) {
             return $filesystem->read($path);
+        });
+
+        $mock_client->shouldReceive('stream')->andReturnUsing(function($path) use ($filesystem) {
+            return $filesystem->readStream($path);
         });
 
         $mock_client->shouldReceive('upload')->andReturnUsing(function($path, $contents) use ($filesystem) {
@@ -141,6 +147,29 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             # Removed as Visibility is not supported in BunnyCDN without
 //            $this->assertEquals(Visibility::PUBLIC, $adapter->visibility('destination.txt')->visibility());
             $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
+        });
+    }
+
+    /**
+     * Fix issue where `fopen` complains when opening downloaded image file#20
+     * https://github.com/PlatformCommunity/flysystem-bunnycdn/pull/20
+     *
+     * @return void
+     * @throws FilesystemException
+     * @throws Throwable
+     */
+    public function test_regression_pr_20()
+    {
+        $image = base64_decode("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==");
+        $this->givenWeHaveAnExistingFile('path.png', $image);
+
+        $this->runScenario(function () use ($image) {
+            $adapter = $this->adapter();
+
+            $stream = $adapter->readStream('path.png');
+
+            $this->assertIsResource($stream);
+            $this->assertEquals($image, stream_get_contents($stream));
         });
     }
 }

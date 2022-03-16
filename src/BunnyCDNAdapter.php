@@ -57,9 +57,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->write($destination, $this->read($source), new Config());
+        // @codeCoverageIgnoreStart
         } catch (UnableToReadFile|UnableToWriteFile $exception) {
             throw UnableToCopyFile::fromLocationTo($source, $destination, $exception);
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -71,9 +73,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->upload($path, $contents);
+        // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToWriteFile::atLocation($path, $e->getMessage());
         }
+        // @codeCoverageIgnoreEnd
 
     }
 
@@ -85,9 +89,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             return $this->client->download($path);
+        // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToReadFile::fromLocation($path, $e->getMessage());
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -99,9 +105,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $entries = $this->client->list($path);
+        // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToRetrieveMetadata::create($path, 'folder', $e->getMessage());
         }
+        // @codeCoverageIgnoreEnd
 
         foreach ($entries as $item) {
             yield $this->normalizeObject($item);
@@ -185,15 +193,12 @@ class BunnyCDNAdapter implements FilesystemAdapter
     /**
      * @param $path
      * @return resource
+     * @throws Exceptions\BunnyCDNException
+     * @throws Exceptions\NotFoundException
      */
     public function readStream($path)
     {
-        /** @var resource $readStream */
-        $readStream = fopen('data://text/plain,' . $this->read($path),'r');
-
-        rewind($readStream);
-
-        return $readStream;
+        return $this->client->stream($path);
     }
 
     /**
@@ -206,10 +211,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
             $this->client->delete(
                 rtrim($path, '/') . '/'
             );
+        // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToDeleteDirectory::atLocation($path, $e->getMessage());
         }
-
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -220,13 +226,14 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->make_directory($path);
+        // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             # Lol apparently this is "idempotent" but there's an exception... Sure whatever..
             if ($e->getMessage() !== 'Directory already exists') {
                 throw UnableToCreateDirectory::atLocation($path, $e->getMessage());
             }
         }
-
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -253,6 +260,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     /**
      * @throws UnableToRetrieveMetadata
      * @throws FilesystemException
+     * @codeCoverageIgnore
      */
     public function mimeType(string $path): FileAttributes
     {
@@ -348,11 +356,13 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->delete($path);
+        // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             if(strpos($e->getMessage(), '404') === False) { # Urgh
                 throw UnableToDeleteFile::atLocation($path, $e->getMessage());
             }
         }
+        // @codeCoverageIgnoreEnd
 
     }
 
@@ -377,6 +387,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * getURL method for Laravel users who want to use BunnyCDN's PullZone to retrieve a public URL
      * @param string $path
      * @return string
+     * @codeCoverageIgnore
      */
     public function getUrl(string $path): string
     {

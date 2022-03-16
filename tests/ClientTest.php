@@ -8,6 +8,8 @@ use League\Flysystem\Filesystem;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 class ClientTest extends TestCase
@@ -21,6 +23,11 @@ class ClientTest extends TestCase
         $this->client = new MockClient(self::STORAGE_ZONE, 'api-key');
     }
 
+    /**
+     * @return void
+     * @throws NotFoundException
+     * @throws BunnyCDNException
+     */
     public function test_listing_directory()
     {
         if($this->client instanceof MockClient) {
@@ -40,6 +47,11 @@ class ClientTest extends TestCase
         $this->assertCount(2, $response);
     }
 
+    /**
+     * @return void
+     * @throws NotFoundException
+     * @throws BunnyCDNException
+     */
     public function test_listing_subdirectory()
     {
         if($this->client instanceof MockClient) {
@@ -58,6 +70,11 @@ class ClientTest extends TestCase
         $this->assertCount(1, $response);
     }
 
+    /**
+     * @return void
+     * @throws NotFoundException
+     * @throws BunnyCDNException
+     */
     public function test_download_file()
     {
         if($this->client instanceof MockClient) {
@@ -71,6 +88,35 @@ class ClientTest extends TestCase
         $this->assertIsString($response);
     }
 
+    /**
+     * @return void
+     * @throws NotFoundException
+     * @throws BunnyCDNException
+     */
+    public function test_streaming()
+    {
+        if($this->client instanceof MockClient) {
+            $this->client->add_response(
+                new Response(200, [], str_repeat('example_image_contents', 1024000)),
+            );
+        }
+
+        $stream = $this->client->stream('/test.png');
+
+        $this->assertIsResource($stream);
+
+        do {
+            $line = stream_get_line($stream, 1024);
+            $this->assertStringContainsString('example_image_contents', $line);
+            $this->assertEquals(1024, strlen($line));
+            break;
+        } while ($line);
+    }
+
+    /**
+     * @return void
+     * @throws BunnyCDNException
+     */
     public function test_upload()
     {
         if($this->client instanceof MockClient) {
@@ -91,6 +137,10 @@ class ClientTest extends TestCase
         ], $response);
     }
 
+    /**
+     * @return void
+     * @throws BunnyCDNException
+     */
     public function test_make_directory()
     {
         if($this->client instanceof MockClient) {
@@ -111,26 +161,38 @@ class ClientTest extends TestCase
         ], $response);
     }
 
+    /**
+     * @return void
+     * @throws NotFoundException
+     * @throws BunnyCDNException
+     * @throws DirectoryNotEmptyException
+     */
     public function test_delete_file()
     {
         if($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(200, [], json_encode([
                     'HttpCode' => 200,
-                    'Message' => 'File deleted successfuly.'
+                    'Message' => 'File deleted successfuly.' // ಠ_ಠ Spelling @bunny.net
                 ]))
             );
         }
 
-        $response = $this->client->delete('/testin.txt');
+        $response = $this->client->delete('/testing.txt');
 
         $this->assertIsArray($response);
         $this->assertEquals([
             'HttpCode' => 200,
-            'Message' => 'File deleted successfuly.'
+            'Message' => 'File deleted successfuly.' // ಠ_ಠ Spelling @bunny.net
         ], $response);
     }
 
+    /**
+     * @return void
+     * @throws NotFoundException
+     * @throws BunnyCDNException
+     * @throws DirectoryNotEmptyException
+     */
     public function test_delete_file_not_found()
     {
         $this->expectException(NotFoundException::class);
@@ -144,6 +206,6 @@ class ClientTest extends TestCase
             );
         }
 
-        $this->client->delete('/test.txt');
+        $this->client->delete('/file_not_found.txt');
     }
 }
