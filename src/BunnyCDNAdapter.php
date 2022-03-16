@@ -6,6 +6,7 @@ use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use League\Flysystem\Adapter\Polyfill\StreamedCopyTrait;
 use League\Flysystem\Adapter\Polyfill\StreamedTrait;
+use League\Flysystem\Adapter\Polyfill\StreamedWritingTrait;
 use League\Flysystem\Config;
 use League\Flysystem\Exception;
 use League\Flysystem\FileNotFoundException;
@@ -19,7 +20,7 @@ class BunnyCDNAdapter extends AbstractAdapter
 {
     use NotSupportingVisibilityTrait;
     use StreamedCopyTrait;
-    use StreamedTrait;
+    use StreamedWritingTrait;
 
     /**
      * Pull Zone URL
@@ -175,6 +176,22 @@ class BunnyCDNAdapter extends AbstractAdapter
                 'contents' => $this->client->download($path)
             ]);
         } catch (Exceptions\BunnyCDNException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Reads a file as a stream.
+     * @param string $path
+     * @return array|false
+     */
+    public function readStream($path)
+    {
+        try {
+            return [
+                'stream' => $this->client->stream($path)
+            ];
+        } catch (\Exception $e) {
             return false;
         }
     }

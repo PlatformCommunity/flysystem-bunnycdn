@@ -65,6 +65,10 @@ class FlysystemTestSuite extends TestCase
             return $filesystem->read($path);
         });
 
+        $mock_client->shouldReceive('stream')->andReturnUsing(function($path) use ($filesystem) {
+            return $filesystem->readStream($path);
+        });
+
         $mock_client->shouldReceive('upload')->andReturnUsing(function($path, $contents) use ($filesystem) {
             try {
                 $filesystem->write($path, $contents);
@@ -378,5 +382,25 @@ class FlysystemTestSuite extends TestCase
         $this->expectException(RuntimeException::class);
 
         $this->assertEquals(self::PULLZONE_URL . 'testing/test.txt', $adapter->getUrl('/testing/test.txt'));
+    }
+
+    /**
+     * Fix issue where `fopen` complains when opening downloaded image file#20
+     * https://github.com/PlatformCommunity/flysystem-bunnycdn/pull/20
+     *
+     * Seems to not be an issue out of v1, only v2 & v3
+     * @throws FileNotFoundException
+     */
+    public function test_regression_pr_20()
+    {
+        $image = base64_decode("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==");
+        $this->givenItHasFile('path.png', $image);
+
+        $filesystem = new Filesystem($this->adapter);
+
+        $stream = $filesystem->readStream('path.png');
+
+        $this->assertIsResource($stream);
+        $this->assertEquals($image, stream_get_contents($stream));
     }
 }

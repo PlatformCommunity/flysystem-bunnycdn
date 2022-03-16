@@ -28,14 +28,18 @@ class BunnyCDNClient
     private static function get_base_url($region): string
     {
         switch ($region) {
-            case 'ny':
+            case BunnyCDNRegion::NEW_YORK:
                 return 'https://ny.storage.bunnycdn.com/';
-            case 'la':
+            case BunnyCDNRegion::LOS_ANGELAS:
                 return 'https://la.storage.bunnycdn.com/';
-            case 'sg':
+            case BunnyCDNRegion::SINGAPORE:
                 return 'https://sg.storage.bunnycdn.com/';
-            case 'syd':
+            case BunnyCDNRegion::SYDNEY:
                 return 'https://syd.storage.bunnycdn.com/';
+            case BunnyCDNRegion::UNITED_KINGDOM:
+                return 'https://uk.storage.bunnycdn.com/';
+            case BunnyCDNRegion::STOCKHOLM:
+                return 'https://se.storage.bunnycdn.com/';
             default:
                 return 'https://storage.bunnycdn.com/';
         }
@@ -104,6 +108,37 @@ class BunnyCDNClient
                 throw new BunnyCDNException($e->getMessage());
             }
         }
+    }
+
+    /**
+     * @param string $path
+     * @return resource|null
+     * @throws BunnyCDNException
+     * @throws NotFoundException
+     */
+    public function stream(string $path)
+    {
+        try {
+            return $this->client->request(
+                'GET',
+                self::get_base_url($this->region) . Util::normalizePath('/' . $this->storage_zone_name . '/').$path,
+                array_merge_recursive([
+                    'stream' => true,
+                    'headers' => [
+                        'Accept' => '*/*',
+                        'AccessKey' => $this->api_key, # Honestly... Why do I have to specify this twice... @BunnyCDN
+                    ]
+                ])
+            )->getBody()->detach();
+            // @codeCoverageIgnoreStart
+        } catch (GuzzleException $e) {
+            if($e->getCode() === 404) {
+                throw new NotFoundException($e->getMessage());
+            } else {
+                throw new BunnyCDNException($e->getMessage());
+            }
+        }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
