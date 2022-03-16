@@ -28,10 +28,12 @@ class BunnyCDNClient
     private static function get_base_url($region): string
     {
         return match($region) {
-            'ny' => 'https://ny.storage.bunnycdn.com/',
-            'la' => 'https://la.storage.bunnycdn.com/',
-            'sg' => 'https://sg.storage.bunnycdn.com/',
-            'syd' => 'https://syd.storage.bunnycdn.com/',
+            BunnyCDNRegion::NEW_YORK => 'https://ny.storage.bunnycdn.com/',
+            BunnyCDNRegion::LOS_ANGELAS => 'https://la.storage.bunnycdn.com/',
+            BunnyCDNRegion::SINGAPORE => 'https://sg.storage.bunnycdn.com/',
+            BunnyCDNRegion::SYDNEY => 'https://syd.storage.bunnycdn.com/',
+            BunnyCDNRegion::UNITED_KINGDOM => 'https://uk.storage.bunnycdn.com/',
+            BunnyCDNRegion::STOCKHOLM => 'https://se.storage.bunnycdn.com/',
             default => 'https://storage.bunnycdn.com/'
         };
     }
@@ -73,14 +75,15 @@ class BunnyCDNClient
             return array_map(function($bunny_cdn_item) {
                 return $bunny_cdn_item;
             }, $listing);
+        // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
                 404 => new NotFoundException($e->getMessage()),
                 default => new BunnyCDNException($e->getMessage())
             };
         }
+        // @codeCoverageIgnoreEnd
     }
-
 
     /**
      * @param string $path
@@ -92,12 +95,44 @@ class BunnyCDNClient
     {
         try {
             return $this->request($path . '?download');
+        // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
                 404 => new NotFoundException($e->getMessage()),
                 default => new BunnyCDNException($e->getMessage())
             };
         }
+        // @codeCoverageIgnoreEnd
+    }
+
+    /**
+     * @param string $path
+     * @return resource|null
+     * @throws BunnyCDNException
+     * @throws NotFoundException
+     */
+    public function stream(string $path)
+    {
+        try {
+            return $this->client->request(
+                'GET',
+                self::get_base_url($this->region) . Util::normalizePath('/' . $this->storage_zone_name . '/').$path,
+                array_merge_recursive([
+                    'stream' => true,
+                    'headers' => [
+                        'Accept' => '*/*',
+                        'AccessKey' => $this->api_key, # Honestly... Why do I have to specify this twice... @BunnyCDN
+                    ]
+                ])
+            )->getBody()->detach();
+        // @codeCoverageIgnoreStart
+        } catch (GuzzleException $e) {
+            throw match ($e->getCode()) {
+                404 => new NotFoundException($e->getMessage()),
+                default => new BunnyCDNException($e->getMessage())
+            };
+        }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -115,11 +150,13 @@ class BunnyCDNClient
                 ],
                 'body' => $contents
             ]);
+        // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
                 default => new BunnyCDNException($e->getMessage())
             };
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -135,12 +172,14 @@ class BunnyCDNClient
                     'Content-Length' => 0
                 ],
             ]);
+        // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
                 400 => new BunnyCDNException('Directory already exists'),
                 default => new BunnyCDNException($e->getMessage())
             };
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -153,6 +192,7 @@ class BunnyCDNClient
     {
         try {
             return $this->request($path, 'DELETE');
+        // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
                 404 => new NotFoundException($e->getMessage()),
@@ -160,5 +200,6 @@ class BunnyCDNClient
                 default => new BunnyCDNException($e->getMessage())
             };
         }
+        // @codeCoverageIgnoreEnd
     }
 }

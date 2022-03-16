@@ -75,10 +75,21 @@ For a full region list, please visit the [BunnyCDN API documentation page](https
 ### List of Regions
 
 ```php
+# Europe
 BunnyCDNRegion::FALKENSTEIN = 'de';
+BunnyCDNRegion::STOCKHOLM = 'se';
+
+# United Kingdom
+BunnyCDNRegion::UNITED_KINGDOM = 'uk';
+
+# USA
 BunnyCDNRegion::NEW_YORK = 'ny';
 BunnyCDNRegion::LOS_ANGELAS = 'la';
+
+# SEA
 BunnyCDNRegion::SINGAPORE = 'sg';
+
+# Oceania
 BunnyCDNRegion::SYDNEY = 'syd';
 ```
 

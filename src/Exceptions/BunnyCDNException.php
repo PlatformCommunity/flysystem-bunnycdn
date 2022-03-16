@@ -2,7 +2,9 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Exceptions;
 
-class BunnyCDNException extends \Exception
+use Exception;
+
+class BunnyCDNException extends Exception
 {
 
 }
