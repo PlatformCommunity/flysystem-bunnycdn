@@ -97,7 +97,7 @@ class ClientTest extends TestCase
     {
         if($this->client instanceof MockClient) {
             $this->client->add_response(
-                new Response(200, [], str_repeat('example_image_contents', 1024000)),
+                new Response(200, [], str_repeat('example_image_contents', 1024000))
             );
         }
 
