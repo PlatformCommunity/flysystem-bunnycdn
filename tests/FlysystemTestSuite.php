@@ -3,6 +3,7 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use Exception;
+use GuzzleHttp\Psr7\Response;
 use League\Flysystem\Config;
 use League\Flysystem\FileExistsException;
 use League\Flysystem\FileNotFoundException;
@@ -15,6 +16,7 @@ use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use Prophecy\Argument;
 use RuntimeException;
 
@@ -385,22 +387,53 @@ class FlysystemTestSuite extends TestCase
     }
 
     /**
-     * Fix issue where `fopen` complains when opening downloaded image file#20
-     * https://github.com/PlatformCommunity/flysystem-bunnycdn/pull/20
+     * Github Issue - 21
+     * https://github.com/PlatformCommunity/flysystem-bunnycdn/issues/21
      *
-     * Seems to not be an issue out of v1, only v2 & v3
-     * @throws FileNotFoundException
+     * Issue present where the date format can come back in either one of the following formats:
+     * -    2022-04-10T17:43:49.297
+     * -    2022-04-10T17:43:49
+     *
+     * Pretty sure I'm just going to create a static method called "parse_bunny_date" within the client to handle this.
+     * @throws BunnyCDNException
      */
     public function test_regression_pr_20()
     {
-        $image = base64_decode("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==");
-        $this->givenItHasFile('path.png', $image);
 
-        $filesystem = new Filesystem($this->adapter);
+        $client = new MockClient(self::STORAGE_ZONE, 'api-key');
 
-        $stream = $filesystem->readStream('path.png');
+        $client->add_response(
+            new Response(200, [], json_encode(
+                [
+                    /**
+                     * First with the milliseconds
+                     */
+                    array_merge(
+                        $client::example_file('/subfolder/example_image.png', self::STORAGE_ZONE),
+                        [
+                            'LastChanged' => date('Y-m-d\TH:i:s.v'),
+                            'DateCreated' => date('Y-m-d\TH:i:s.v'),
+                        ]
+                    ),
+                    /**
+                     * Then without
+                     */
+                    array_merge(
+                        $client::example_file('/subfolder/example_image.png', self::STORAGE_ZONE),
+                        [
+                            'LastChanged' => date('Y-m-d\TH:i:s'),
+                            'DateCreated' => date('Y-m-d\TH:i:s'),
+                        ]
+                    )
+                ]
+            ))
+        );
 
-        $this->assertIsResource($stream);
-        $this->assertEquals($image, stream_get_contents($stream));
+        $adapter = new BunnyCDNAdapter($client);
+        $response = $adapter->listContents('/');
+
+        $this->assertIsArray($response);
+        $this->assertCount(2, $response);
     }
+
 }
