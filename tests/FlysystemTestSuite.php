@@ -397,7 +397,7 @@ class FlysystemTestSuite extends TestCase
      * Pretty sure I'm just going to create a static method called "parse_bunny_date" within the client to handle this.
      * @throws BunnyCDNException
      */
-    public function test_regression_pr_20()
+    public function test_regression_issue_21()
     {
 
         $client = new MockClient(self::STORAGE_ZONE, 'api-key');
