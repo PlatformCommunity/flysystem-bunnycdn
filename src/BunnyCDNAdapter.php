@@ -247,11 +247,11 @@ class BunnyCDNAdapter extends AbstractAdapter
             ),
             'object_name' => $bunny_file_array['ObjectName'],
             'size'      => $bunny_file_array['Length'],
-            'timestamp' => date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['LastChanged'].'000')->getTimestamp(),
+            'timestamp' => self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
             'server_id' => $bunny_file_array['ServerId'],
             'user_id' => $bunny_file_array['UserId'],
-            'last_changed' => date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['LastChanged'].'000')->getTimestamp(),
-            'date_created' => date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['DateCreated'].'000')->getTimestamp(),
+            'last_changed' => self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
+            'date_created' => self::parse_bunny_timestamp($bunny_file_array['DateCreated']),
             'storage_zone_name' => $bunny_file_array['StorageZoneName'],
             'storage_zone_id' => $bunny_file_array['StorageZoneId'],
             'checksum' => $bunny_file_array['Checksum'],
@@ -330,5 +330,10 @@ class BunnyCDNAdapter extends AbstractAdapter
         }
 
         return rtrim($this->pullzone_url, '/') . '/' . ltrim($path, '/');
+    }
+
+    private static function parse_bunny_timestamp(string $timestamp): int
+    {
+        return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
     }
 }
