@@ -150,7 +150,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
                 ),
                 $bunny_file_array['Length'],
                 Visibility::PUBLIC,
-                date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['LastChanged'].'000')->getTimestamp(),
+                self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
                 $bunny_file_array['ContentType'],
                 $this->extractExtraMetadata($bunny_file_array)
             );
@@ -168,7 +168,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             'dirname'   => Util::splitPathIntoDirectoryAndFile($bunny_file_array['Path'])['dir'],
             'guid' => $bunny_file_array['Guid'],
             'object_name' => $bunny_file_array['ObjectName'],
-            'timestamp' => date_create_from_format('Y-m-d\TH:i:s.u', $bunny_file_array['LastChanged'].'000')->getTimestamp(),
+            'timestamp' => self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
             'server_id' => $bunny_file_array['ServerId'],
             'user_id' => $bunny_file_array['UserId'],
             'date_created' => $bunny_file_array['DateCreated'],
@@ -396,5 +396,10 @@ class BunnyCDNAdapter implements FilesystemAdapter
         }
 
         return rtrim($this->pullzone_url, '/') . '/' . ltrim($path, '/');
+    }
+
+    private static function parse_bunny_timestamp(string $timestamp): int
+    {
+        return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
     }
 }
