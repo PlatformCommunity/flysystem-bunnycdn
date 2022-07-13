@@ -189,14 +189,18 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function detectMimeType(string $path): string
     {
-        $detector = new FinfoMimeTypeDetector();
-        $mimeType = $detector->detectMimeTypeFromPath($path);
-
-        if (! $mimeType) {
-            return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+        try {
+            $detector = new FinfoMimeTypeDetector();
+            $mimeType = $detector->detectMimeTypeFromPath($path);
+    
+            if (! $mimeType) {
+                return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+            }
+    
+            return $mimeType;
+        } catch (\Exception $e) {
+            return '';
         }
-
-        return $mimeType;
     }
 
     /**
