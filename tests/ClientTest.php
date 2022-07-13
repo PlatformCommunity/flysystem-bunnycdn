@@ -106,9 +106,9 @@ class ClientTest extends TestCase
         $this->assertIsResource($stream);
 
         do {
-            $line = stream_get_line($stream, 1024);
+            $line = stream_get_line($stream, 512);
             $this->assertStringContainsString('example_image_contents', $line);
-            $this->assertEquals(1024, strlen($line));
+            $this->assertEquals(512, strlen($line));
             break;
         } while ($line);
     }

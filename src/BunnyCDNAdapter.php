@@ -185,9 +185,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * Detects the mime type from the provided file path
      *
      * @param string $path
-     * @return ?string
+     * @return string
+     * @throws Exceptions\BunnyCDNException
+     * @throws Exceptions\NotFoundException
      */
-    public function detectMimeType(string $path): ?string
+    public function detectMimeType(string $path): string
     {
         $detector = new FinfoMimeTypeDetector();
         $mimeType = $detector->detectMimeTypeFromPath($path);
@@ -294,7 +296,19 @@ class BunnyCDNAdapter implements FilesystemAdapter
 
             /** @var FileAttributes $object */
             if (!$object->mimeType()) {
-                throw new UnableToRetrieveMetadata('Unknown Mimetype');
+                $mimeType = $this->detectMimeType($path);
+
+                if(!$mimeType || $mimeType === 'text/plain') {
+                    throw new UnableToRetrieveMetadata('Unknown Mimetype');
+                }
+
+                return new FileAttributes(
+                    $path,
+                    null,
+                    null,
+                    null,
+                    $mimeType
+                );
             }
 
             return $object;
