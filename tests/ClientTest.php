@@ -110,8 +110,7 @@ class ClientTest extends TestCase
             $line = stream_get_line($stream, 512);
             $this->assertStringContainsString('example_image_contents', $line);
             $this->assertEquals(512, strlen($line));
-            break;
-        } while ($line);
+        } while ($line && strlen($line) > 512);
     }
 
     /**
