@@ -38,7 +38,7 @@ jobs:
       run: composer install --prefer-dist --no-progress --no-interaction
 
     - name: Run linter
-      run: ./vendor/bin/pint -v
+      run: ./vendor/bin/pint -v --test
 
     - name: Run tests
       run: vendor/bin/phpunit -c ./phpunit.xml
