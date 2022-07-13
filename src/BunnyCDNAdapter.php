@@ -150,7 +150,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
                 $bunny_file_array['Length'],
                 Visibility::PUBLIC,
                 self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
-                $bunny_file_array['ContentType'],
+                $bunny_file_array['ContentType'] ?: $this->detectMimeType($bunny_file_array['Path'].$bunny_file_array['ObjectName']),
                 $this->extractExtraMetadata($bunny_file_array)
             )
         };
@@ -189,14 +189,18 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function detectMimeType(string $path): string
     {
-        $detector = new FinfoMimeTypeDetector();
-        $mimeType = $detector->detectMimeTypeFromPath($path);
+        try {
+            $detector = new FinfoMimeTypeDetector();
+            $mimeType = $detector->detectMimeTypeFromPath($path);
 
-        if (! $mimeType) {
-            return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+            if (! $mimeType) {
+                return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+            }
+
+            return $mimeType;
+        } catch (\Exception $e) {
+            return '';
         }
-
-        return $mimeType;
     }
 
     /**
