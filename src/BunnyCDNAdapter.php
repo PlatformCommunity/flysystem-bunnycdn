@@ -150,7 +150,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
                 $bunny_file_array['Length'],
                 Visibility::PUBLIC,
                 self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
-                $bunny_file_array['ContentType'],
+                $bunny_file_array['ContentType'] ?: $this->detectMimeType($bunny_file_array['Path'] . $bunny_file_array['ObjectName']),
                 $this->extractExtraMetadata($bunny_file_array)
             )
         };
