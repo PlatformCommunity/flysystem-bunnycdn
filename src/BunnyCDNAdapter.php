@@ -22,6 +22,7 @@ use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\UnableToSetVisibility;
 use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\Visibility;
+use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use RuntimeException;
 use stdClass;
 use function PHPUnit\Framework\stringContains;
@@ -60,7 +61,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->write($destination, $this->read($source), new Config());
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (UnableToReadFile|UnableToWriteFile $exception) {
             throw UnableToCopyFile::fromLocationTo($source, $destination, $exception);
         }
@@ -76,12 +77,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->upload($path, $contents);
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToWriteFile::atLocation($path, $e->getMessage());
         }
         // @codeCoverageIgnoreEnd
-
     }
 
     /**
@@ -92,7 +92,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             return $this->client->download($path);
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToReadFile::fromLocation($path, $e->getMessage());
         }
@@ -108,7 +108,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $entries = $this->client->list($path);
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToRetrieveMetadata::create($path, 'folder', $e->getMessage());
         }
@@ -153,7 +153,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
                 $bunny_file_array['Length'],
                 Visibility::PUBLIC,
                 date_create_from_format('Y-m-d\TH:i:s.v', $bunny_file_array['LastChanged'])->getTimestamp(),
-                $bunny_file_array['ContentType'],
+                $this->detectMimeType($bunny_file_array['Path'] . $bunny_file_array['ObjectName']),
                 $this->extractExtraMetadata($bunny_file_array)
             )
         };
@@ -179,6 +179,24 @@ class BunnyCDNAdapter implements FilesystemAdapter
             'checksum' => $bunny_file_array['Checksum'],
             'replicated_zones' => $bunny_file_array['ReplicatedZones'],
         ];
+    }
+
+    /**
+     * Detects the mime type from the provided file path
+     *
+     * @param string $path
+     * @return ?string
+     */
+    public function detectMimeType(string $path): ?string
+    {
+        $detector = new FinfoMimeTypeDetector();
+        $mimeType = $detector->detectMimeTypeFromPath($path);
+
+        if (!$mimeType) {
+            return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+        }
+
+        return $mimeType;
     }
 
     /**
@@ -213,7 +231,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             $this->client->delete(
                 rtrim($path, '/') . '/'
             );
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToDeleteDirectory::atLocation($path, $e->getMessage());
         }
@@ -228,7 +246,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->make_directory($path);
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             # Lol apparently this is "idempotent" but there's an exception... Sure whatever..
             match ($e->getMessage()) {
@@ -237,7 +255,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
             };
         }
         // @codeCoverageIgnoreEnd
-
     }
 
     /**
@@ -271,7 +288,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
         try {
             $object = $this->getObject($path);
 
-            if($object instanceof DirectoryAttributes) {
+            if ($object instanceof DirectoryAttributes) {
                 throw new UnableToRetrieveMetadata('Cannot retrieve mimetype of folder');
             }
 
@@ -290,9 +307,10 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * @param $path
      * @return mixed
      */
-    protected function getObject($path): StorageAttributes
+    protected function getObject(string $path = ''): StorageAttributes
     {
-        $list = (new DirectoryListing($this->listContents()))
+        $directory = pathinfo($path, PATHINFO_DIRNAME);
+        $list = (new DirectoryListing($this->listContents($directory)))
             ->filter(function (StorageAttributes $item) use ($path) {
                 return $item->path() === $path;
             })->toArray();
@@ -328,7 +346,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
         try {
             $object = $this->getObject($path);
 
-            if($object instanceof DirectoryAttributes) {
+            if ($object instanceof DirectoryAttributes) {
                 throw new UnableToRetrieveMetadata('Cannot retrieve size of folder');
             }
 
@@ -360,14 +378,13 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->delete($path);
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
-            if(!str_contains($e->getMessage(), '404')) { # Urgh
+            if (!str_contains($e->getMessage(), '404')) { # Urgh
                 throw UnableToDeleteFile::atLocation($path, $e->getMessage());
             }
         }
         // @codeCoverageIgnoreEnd
-
     }
 
     /**
@@ -388,7 +405,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             Util::splitPathIntoDirectoryAndFile($path)['dir']
         ));
 
-        $count = $list->filter(function(StorageAttributes $item) use ($path) {
+        $count = $list->filter(function (StorageAttributes $item) use ($path) {
             return Util::normalizePath($item->path()) === Util::normalizePath($path);
         })->toArray();
 

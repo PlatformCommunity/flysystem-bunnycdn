@@ -11,7 +11,8 @@
     "require": {
         "league/flysystem": "^3.0",
         "ext-json": "*",
-        "guzzlehttp/guzzle": "^7.4"
+        "guzzlehttp/guzzle": "^7.4",
+        "league/mime-type-detection": "^1.11"
     },
     "require-dev": {
         "phpunit/phpunit": "@stable",

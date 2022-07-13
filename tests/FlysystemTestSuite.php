@@ -30,8 +30,9 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
         $mock_client = Mockery::mock(new BunnyCDNClient(self::STORAGE_ZONE, 'api-key'));
 
-        $mock_client->shouldReceive('list')->andReturnUsing(function($path) use ($filesystem) {
-            return $filesystem->listContents($path)->map(function(StorageAttributes $file) {
+
+        $mock_client->shouldReceive('list')->andReturnUsing(function ($path) use ($filesystem) {
+            return $filesystem->listContents($path)->map(function (StorageAttributes $file) {
                 return !$file instanceof FileAttributes
                     ? MockClient::example_folder($file->path(), self::STORAGE_ZONE, [])
                     : MockClient::example_file($file->path(), self::STORAGE_ZONE, [
@@ -40,24 +41,24 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             })->toArray();
         });
 
-        $mock_client->shouldReceive('download')->andReturnUsing(function($path) use ($filesystem) {
+        $mock_client->shouldReceive('download')->andReturnUsing(function ($path) use ($filesystem) {
             return $filesystem->read($path);
         });
 
-        $mock_client->shouldReceive('stream')->andReturnUsing(function($path) use ($filesystem) {
+        $mock_client->shouldReceive('stream')->andReturnUsing(function ($path) use ($filesystem) {
             return $filesystem->readStream($path);
         });
 
-        $mock_client->shouldReceive('upload')->andReturnUsing(function($path, $contents) use ($filesystem) {
+        $mock_client->shouldReceive('upload')->andReturnUsing(function ($path, $contents) use ($filesystem) {
             $filesystem->write($path, $contents);
             return"{status: 200}";
         });
 
-        $mock_client->shouldReceive('make_directory')->andReturnUsing(function($path) use ($filesystem) {
+        $mock_client->shouldReceive('make_directory')->andReturnUsing(function ($path) use ($filesystem) {
             return $filesystem->createDirectory($path);
         });
 
-        $mock_client->shouldReceive('delete')->andReturnUsing(function($path) use ($filesystem) {
+        $mock_client->shouldReceive('delete')->andReturnUsing(function ($path) use ($filesystem) {
             $filesystem->deleteDirectory($path);
             $filesystem->delete($path);
         });
@@ -68,9 +69,52 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     /**
      * Skipped
      */
-    public function setting_visibility(): void { $this->markTestSkipped('No visibility supported'); }
-    public function listing_contents_recursive(): void { $this->markTestSkipped('No recursive supported'); }
-    public function fetching_the_mime_type_of_an_svg_file(): void { $this->markTestSkipped('Mimetypes not yet supported'); }
+    public function setting_visibility(): void
+    {
+        $this->markTestSkipped('No visibility supported');
+    }
+    public function listing_contents_recursive(): void
+    {
+        $this->markTestSkipped('No recursive supported');
+    }
+
+    /**
+     * @test
+     */
+    public function fetching_the_mime_type_of_an_svg_file_by_file_name(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'source.svg',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            $this->assertSame(
+                'image/svg+xml',
+                $adapter->detectMimeType('source.svg')
+            );
+        });
+    }
+
+
+    /**
+     * @test
+     */
+    public function deep_fetching_a_file(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'this/is/a/long/sub/directory/source.txt',
+                'this is test content',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            $this->assertSame('this/is/a/long/sub/directory/source.txt', $adapter->fileSize('this/is/a/long/sub/directory/source.txt')->path());
+        });
+    }
 
 
     /**
