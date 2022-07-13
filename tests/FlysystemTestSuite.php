@@ -6,7 +6,6 @@ use Faker\Provider\File;
 use GuzzleHttp\Psr7\Response;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
-use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
@@ -17,8 +16,6 @@ use League\Flysystem\Visibility;
 use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
-use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
-use PlatformCommunity\Flysystem\BunnyCDN\Util;
 use Throwable;
 
 class FlysystemTestSuite extends FilesystemAdapterTestCase
@@ -35,6 +32,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         $class = new \ReflectionClass($obj);
         $method = $class->getMethod($name);
         $method->setAccessible(true);
+
         return $method->invokeArgs($obj, $args);
     }
 
@@ -44,13 +42,12 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
         $mock_client = Mockery::mock(new BunnyCDNClient(self::STORAGE_ZONE, 'api-key'));
 
-
         $mock_client->shouldReceive('list')->andReturnUsing(function ($path) use ($filesystem) {
             return $filesystem->listContents($path)->map(function (StorageAttributes $file) {
-                return !$file instanceof FileAttributes
+                return ! $file instanceof FileAttributes
                     ? MockClient::example_folder($file->path(), self::STORAGE_ZONE, [])
                     : MockClient::example_file($file->path(), self::STORAGE_ZONE, [
-                        'Length' => $file->fileSize()
+                        'Length' => $file->fileSize(),
                     ]);
             })->toArray();
         });
@@ -65,7 +62,8 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
         $mock_client->shouldReceive('upload')->andReturnUsing(function ($path, $contents) use ($filesystem) {
             $filesystem->write($path, $contents);
-            return"{status: 200}";
+
+            return'{status: 200}';
         });
 
         $mock_client->shouldReceive('make_directory')->andReturnUsing(function ($path) use ($filesystem) {
@@ -87,6 +85,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     {
         $this->markTestSkipped('No visibility supported');
     }
+
     public function listing_contents_recursive(): void
     {
         $this->markTestSkipped('No recursive supported');
@@ -112,7 +111,6 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         });
     }
 
-
     /**
      * @test
      */
@@ -130,7 +128,6 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             $this->assertSame('this/is/a/long/sub/directory/source.txt', $object->path());
         });
     }
-
 
     /**
      * Section where Visibility needs to be fixed...
@@ -153,7 +150,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
             $this->assertTrue($adapter->fileExists('source.txt'));
             $this->assertTrue($adapter->fileExists('destination.txt'));
-            # Removed as Visibility is not supported in BunnyCDN without
+            // Removed as Visibility is not supported in BunnyCDN without
 //            $this->assertEquals(Visibility::PUBLIC, $adapter->visibility('destination.txt')->visibility());
             $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
         });
@@ -176,7 +173,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
             $this->assertTrue($adapter->fileExists('source.txt'));
             $this->assertTrue($adapter->fileExists('destination.txt'));
-            # Removed as Visibility is not supported in BunnyCDN without
+            // Removed as Visibility is not supported in BunnyCDN without
 //            $this->assertEquals(Visibility::PUBLIC, $adapter->visibility('destination.txt')->visibility());
             $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
         });
@@ -203,7 +200,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
                 $adapter->fileExists('destination.txt'),
                 'After moving, a file should be present at the new location.'
             );
-            # Removed as Visibility is not supported in BunnyCDN without
+            // Removed as Visibility is not supported in BunnyCDN without
 //            $this->assertEquals(Visibility::PUBLIC, $adapter->visibility('destination.txt')->visibility());
             $this->assertEquals('contents to be copied', $adapter->read('destination.txt'));
         });
@@ -214,12 +211,13 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      * https://github.com/PlatformCommunity/flysystem-bunnycdn/pull/20
      *
      * @return void
+     *
      * @throws FilesystemException
      * @throws Throwable
      */
     public function test_regression_pr_20()
     {
-        $image = base64_decode("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==");
+        $image = base64_decode('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==');
         $this->givenWeHaveAnExistingFile('path.png', $image);
 
         $this->runScenario(function () use ($image) {
@@ -241,6 +239,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      * -    2022-04-10T17:43:49
      *
      * Pretty sure I'm just going to create a static method called "parse_bunny_date" within the client to handle this.
+     *
      * @throws FilesystemException
      */
     public function test_regression_issue_21()
@@ -269,7 +268,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
                             'LastChanged' => date('Y-m-d\TH:i:s'),
                             'DateCreated' => date('Y-m-d\TH:i:s'),
                         ]
-                    )
+                    ),
                 ]
             ))
         );

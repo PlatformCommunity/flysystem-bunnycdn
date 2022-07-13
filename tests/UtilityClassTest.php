@@ -10,6 +10,7 @@ class UtilityClassTest extends TestCase
 {
     /**
      * @test
+     *
      * @throws Exception
      */
     public function it_starts_with()
@@ -25,6 +26,7 @@ class UtilityClassTest extends TestCase
 
     /**
      * @test
+     *
      * @throws Exception
      */
     public function it_ends_with()
@@ -44,6 +46,7 @@ class UtilityClassTest extends TestCase
 
     /**
      * @test
+     *
      * @throws Exception
      */
     public function it_tests_normalize_path()
@@ -66,6 +69,7 @@ class UtilityClassTest extends TestCase
 
     /**
      * @test
+     *
      * @throws Exception
      */
     public function it_path_split()
