@@ -17,6 +17,7 @@ use League\Flysystem\Visibility;
 use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 use Throwable;
 
@@ -229,5 +230,54 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             $this->assertIsResource($stream);
             $this->assertEquals($image, stream_get_contents($stream));
         });
+    }
+
+    /**
+     * Github Issue - 21
+     * https://github.com/PlatformCommunity/flysystem-bunnycdn/issues/21
+     *
+     * Issue present where the date format can come back in either one of the following formats:
+     * -    2022-04-10T17:43:49.297
+     * -    2022-04-10T17:43:49
+     *
+     * Pretty sure I'm just going to create a static method called "parse_bunny_date" within the client to handle this.
+     * @throws FilesystemException
+     */
+    public function test_regression_issue_21()
+    {
+        $client = new MockClient(self::STORAGE_ZONE, 'api-key');
+
+        $client->add_response(
+            new Response(200, [], json_encode(
+                [
+                    /**
+                     * First with the milliseconds
+                     */
+                    array_merge(
+                        $client::example_file('/example_image.png', self::STORAGE_ZONE),
+                        [
+                            'LastChanged' => date('Y-m-d\TH:i:s.v'),
+                            'DateCreated' => date('Y-m-d\TH:i:s.v'),
+                        ]
+                    ),
+                    /**
+                     * Then without
+                     */
+                    array_merge(
+                        $client::example_file('/example_image.png', self::STORAGE_ZONE),
+                        [
+                            'LastChanged' => date('Y-m-d\TH:i:s'),
+                            'DateCreated' => date('Y-m-d\TH:i:s'),
+                        ]
+                    )
+                ]
+            ))
+        );
+
+        $adapter = new Filesystem(new BunnyCDNAdapter($client));
+        $response = $adapter->listContents('/')->toArray();
+
+        $this->assertIsArray($response);
+        $this->assertCount(2, $response);
     }
 }
