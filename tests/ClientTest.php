@@ -3,10 +3,7 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use GuzzleHttp\Psr7\Response;
-use League\Flysystem\Config;
-use League\Flysystem\Filesystem;
 use PHPUnit\Framework\TestCase;
-use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
@@ -25,17 +22,18 @@ class ClientTest extends TestCase
 
     /**
      * @return void
+     *
      * @throws NotFoundException
      * @throws BunnyCDNException
      */
     public function test_listing_directory()
     {
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(200, [], json_encode(
                     [
                         $this->client::example_folder('subfolder', self::STORAGE_ZONE),
-                        $this->client::example_file('example_image.png', self::STORAGE_ZONE)
+                        $this->client::example_file('example_image.png', self::STORAGE_ZONE),
                     ]
                 ))
             );
@@ -49,16 +47,17 @@ class ClientTest extends TestCase
 
     /**
      * @return void
+     *
      * @throws NotFoundException
      * @throws BunnyCDNException
      */
     public function test_listing_subdirectory()
     {
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(200, [], json_encode(
                     [
-                        $this->client::example_file('/subfolder/example_image.png', self::STORAGE_ZONE)
+                        $this->client::example_file('/subfolder/example_image.png', self::STORAGE_ZONE),
                     ]
                 ))
             );
@@ -72,12 +71,13 @@ class ClientTest extends TestCase
 
     /**
      * @return void
+     *
      * @throws NotFoundException
      * @throws BunnyCDNException
      */
     public function test_download_file()
     {
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(200, [], 'example_image_contents')
             );
@@ -90,12 +90,13 @@ class ClientTest extends TestCase
 
     /**
      * @return void
+     *
      * @throws NotFoundException
      * @throws BunnyCDNException
      */
     public function test_streaming()
     {
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(200, [], str_repeat('example_image_contents', 1024000)),
             );
@@ -109,21 +110,21 @@ class ClientTest extends TestCase
             $line = stream_get_line($stream, 512);
             $this->assertStringContainsString('example_image_contents', $line);
             $this->assertEquals(512, strlen($line));
-            break;
-        } while ($line);
+        } while ($line && strlen($line) > 512);
     }
 
     /**
      * @return void
+     *
      * @throws BunnyCDNException
      */
     public function test_upload()
     {
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(201, [], json_encode([
-                    'HttpCode'  => 201,
-                    'Message'   => 'File uploaded.'
+                    'HttpCode' => 201,
+                    'Message' => 'File uploaded.',
                 ]))
             );
         }
@@ -132,22 +133,23 @@ class ClientTest extends TestCase
 
         $this->assertIsArray($response);
         $this->assertEquals([
-            'HttpCode'  => 201,
-            'Message'   => 'File uploaded.'
+            'HttpCode' => 201,
+            'Message' => 'File uploaded.',
         ], $response);
     }
 
     /**
      * @return void
+     *
      * @throws BunnyCDNException
      */
     public function test_make_directory()
     {
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(201, [], json_encode([
                     'HttpCode' => 201,
-                    'Message' => 'Directory created.'
+                    'Message' => 'Directory created.',
                 ]))
             );
         }
@@ -157,23 +159,24 @@ class ClientTest extends TestCase
         $this->assertIsArray($response);
         $this->assertEquals([
             'HttpCode' => 201,
-            'Message' => 'Directory created.'
+            'Message' => 'Directory created.',
         ], $response);
     }
 
     /**
      * @return void
+     *
      * @throws NotFoundException
      * @throws BunnyCDNException
      * @throws DirectoryNotEmptyException
      */
     public function test_delete_file()
     {
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(200, [], json_encode([
                     'HttpCode' => 200,
-                    'Message' => 'File deleted successfuly.' // ಠ_ಠ Spelling @bunny.net
+                    'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
                 ]))
             );
         }
@@ -183,12 +186,13 @@ class ClientTest extends TestCase
         $this->assertIsArray($response);
         $this->assertEquals([
             'HttpCode' => 200,
-            'Message' => 'File deleted successfuly.' // ಠ_ಠ Spelling @bunny.net
+            'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
         ], $response);
     }
 
     /**
      * @return void
+     *
      * @throws NotFoundException
      * @throws BunnyCDNException
      * @throws DirectoryNotEmptyException
@@ -197,15 +201,60 @@ class ClientTest extends TestCase
     {
         $this->expectException(NotFoundException::class);
 
-        if($this->client instanceof MockClient) {
+        if ($this->client instanceof MockClient) {
             $this->client->add_response(
                 new Response(404, [], json_encode([
                     'HttpCode' => 404,
-                    'Message' => 'Object Not Found.'
+                    'Message' => 'Object Not Found.',
                 ]))
             );
         }
 
         $this->client->delete('/file_not_found.txt');
     }
+
+    /**
+     * Utility Classes
+     */
+
+//    /**
+//     * @param $path
+//     * @param $contents
+//     * @return void
+//     * @throws BunnyCDNException
+//     */
+//    private function givenWeHaveAnExistingFile($path = '/example_file', $contents = ''): void
+//    {
+//        if($this->client instanceof MockClient) {
+//            $this->client->add_response(
+//                new Response(200, [], json_encode(
+//                    [
+//                        $this->client::example_file($path, self::STORAGE_ZONE)
+//                    ]
+//                ))
+//            );
+//        } else {
+//            $this->client->upload($path, $contents);
+//        }
+//    }
+//
+//    /**
+//     * @param $path
+//     * @return void
+//     * @throws BunnyCDNException
+//     */
+//    public function givenWeHaveAnExistingFolder($path = '/example_folder'): void
+//    {
+//        if($this->client instanceof MockClient) {
+//            $this->client->add_response(
+//                new Response(200, [], json_encode(
+//                    [
+//                        $this->client::example_folder($path, self::STORAGE_ZONE)
+//                    ]
+//                ))
+//            );
+//        } else {
+//            $this->client->make_directory($path);
+//        }
+//    }
 }

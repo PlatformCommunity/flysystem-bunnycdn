@@ -9,7 +9,6 @@ use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\InvalidVisibilityProvided;
-use League\Flysystem\PathPrefixer;
 use League\Flysystem\StorageAttributes;
 use League\Flysystem\UnableToCheckExistence;
 use League\Flysystem\UnableToCopyFile;
@@ -24,14 +23,12 @@ use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\Visibility;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use RuntimeException;
-use stdClass;
-use function PHPUnit\Framework\stringContains;
 
 class BunnyCDNAdapter implements FilesystemAdapter
 {
-
     /**
      * Pull Zone URL
+     *
      * @var string
      */
     private string $pullzone_url;
@@ -42,8 +39,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
     private BunnyCDNClient $client;
 
     /**
-     * @param BunnyCDNClient $client
-     * @param string $pullzone_url
+     * @param  BunnyCDNClient  $client
+     * @param  string  $pullzone_url
      */
     public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
     {
@@ -54,7 +51,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     /**
      * @param $source
      * @param $destination
-     * @param Config $config
+     * @param  Config  $config
      * @return void
      */
     public function copy($source, $destination, Config $config): void
@@ -71,7 +68,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     /**
      * @param $path
      * @param $contents
-     * @param Config $config
+     * @param  Config  $config
      */
     public function write($path, $contents, Config $config): void
     {
@@ -100,8 +97,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
     }
 
     /**
-     * @param string $path
-     * @param bool $deep
+     * @param  string  $path
+     * @param  bool  $deep
      * @return iterable
      */
     public function listContents(string $path = '', bool $deep = false): iterable
@@ -127,7 +124,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     }
 
     /**
-     * @param array $bunny_file_array
+     * @param  array  $bunny_file_array
      * @return StorageAttributes
      */
     protected function normalizeObject(array $bunny_file_array): StorageAttributes
@@ -136,18 +133,18 @@ class BunnyCDNAdapter implements FilesystemAdapter
             true => new DirectoryAttributes(
                 Util::normalizePath(
                     str_replace(
-                        $bunny_file_array['StorageZoneName'] . '/',
+                        $bunny_file_array['StorageZoneName'].'/',
                         '/',
-                        $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
+                        $bunny_file_array['Path'].$bunny_file_array['ObjectName']
                     )
                 )
             ),
             false => new FileAttributes(
                 Util::normalizePath(
                     str_replace(
-                        $bunny_file_array['StorageZoneName'] . '/',
+                        $bunny_file_array['StorageZoneName'].'/',
                         '/',
-                        $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
+                        $bunny_file_array['Path'].$bunny_file_array['ObjectName']
                     )
                 ),
                 $bunny_file_array['Length'],
@@ -160,14 +157,14 @@ class BunnyCDNAdapter implements FilesystemAdapter
     }
 
     /**
-     * @param array $bunny_file_array
+     * @param  array  $bunny_file_array
      * @return array
      */
     private function extractExtraMetadata(array $bunny_file_array): array
     {
         return [
-            'type'      => $bunny_file_array['IsDirectory'] ? 'dir' : 'file',
-            'dirname'   => Util::splitPathIntoDirectoryAndFile($bunny_file_array['Path'])['dir'],
+            'type' => $bunny_file_array['IsDirectory'] ? 'dir' : 'file',
+            'dirname' => Util::splitPathIntoDirectoryAndFile($bunny_file_array['Path'])['dir'],
             'guid' => $bunny_file_array['Guid'],
             'object_name' => $bunny_file_array['ObjectName'],
             'timestamp' => self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
@@ -184,8 +181,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
     /**
      * Detects the mime type from the provided file path
      *
-     * @param string $path
+     * @param  string  $path
      * @return string
+     *
      * @throws Exceptions\BunnyCDNException
      * @throws Exceptions\NotFoundException
      */
@@ -194,7 +192,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
         $detector = new FinfoMimeTypeDetector();
         $mimeType = $detector->detectMimeTypeFromPath($path);
 
-        if (!$mimeType) {
+        if (! $mimeType) {
             return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
         }
 
@@ -204,7 +202,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     /**
      * @param $path
      * @param $contents
-     * @param Config $config
+     * @param  Config  $config
      * @return void
      */
     public function writeStream($path, $contents, Config $config): void
@@ -215,6 +213,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     /**
      * @param $path
      * @return resource
+     *
      * @throws Exceptions\BunnyCDNException
      * @throws Exceptions\NotFoundException
      */
@@ -231,7 +230,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             $this->client->delete(
-                rtrim($path, '/') . '/'
+                rtrim($path, '/').'/'
             );
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
@@ -250,9 +249,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
             $this->client->make_directory($path);
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
-            # Lol apparently this is "idempotent" but there's an exception... Sure whatever..
+            // Lol apparently this is "idempotent" but there's an exception... Sure whatever..
             match ($e->getMessage()) {
-                'Directory already exists' => "",
+                'Directory already exists' => '',
                 default => throw UnableToCreateDirectory::atLocation($path, $e->getMessage())
             };
         }
@@ -265,7 +264,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function setVisibility(string $path, string $visibility): void
     {
-        throw UnableToSetVisibility::atLocation($path, "BunnyCDN does not support visibility");
+        throw UnableToSetVisibility::atLocation($path, 'BunnyCDN does not support visibility');
     }
 
     /**
@@ -281,8 +280,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
     }
 
     /**
-     * @throws UnableToRetrieveMetadata
-     * @throws FilesystemException
+     * @param  string  $path
+     * @return FileAttributes
+     *
+     * @throws Exceptions\BunnyCDNException
+     * @throws Exceptions\NotFoundException
      * @codeCoverageIgnore
      */
     public function mimeType(string $path): FileAttributes
@@ -295,10 +297,10 @@ class BunnyCDNAdapter implements FilesystemAdapter
             }
 
             /** @var FileAttributes $object */
-            if (!$object->mimeType()) {
+            if (! $object->mimeType()) {
                 $mimeType = $this->detectMimeType($path);
 
-                if(!$mimeType || $mimeType === 'text/plain') {
+                if (! $mimeType || $mimeType === 'text/plain') { // Really not happy about this being required by Fly's Test case
                     throw new UnableToRetrieveMetadata('Unknown Mimetype');
                 }
 
@@ -332,14 +334,16 @@ class BunnyCDNAdapter implements FilesystemAdapter
         if (count($list) === 1) {
             return $list[0];
         } elseif (count($list) > 1) {
-            throw UnableToReadFile::fromLocation($path, 'More than one file was returned for path:"' . $path . '", contact package author.');
+            // @codeCoverageIgnoreStart
+            throw UnableToReadFile::fromLocation($path, 'More than one file was returned for path:"'.$path.'", contact package author.');
+        // @codeCoverageIgnoreEnd
         } else {
-            throw UnableToReadFile::fromLocation($path, 'Error 404:"' . $path . '"');
+            throw UnableToReadFile::fromLocation($path, 'Error 404:"'.$path.'"');
         }
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return FileAttributes
      */
     public function lastModified(string $path): FileAttributes
@@ -352,7 +356,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return FileAttributes
      */
     public function fileSize(string $path): FileAttributes
@@ -361,7 +365,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
             $object = $this->getObject($path);
 
             if ($object instanceof DirectoryAttributes) {
+                // @codeCoverageIgnoreStart
                 throw new UnableToRetrieveMetadata('Cannot retrieve size of folder');
+                // @codeCoverageIgnoreEnd
             }
 
             return $object;
@@ -394,7 +400,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             $this->client->delete($path);
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
-            if (!str_contains($e->getMessage(), '404')) { # Urgh
+            if (! str_contains($e->getMessage(), '404')) { // Urgh
                 throw UnableToDeleteFile::atLocation($path, $e->getMessage());
             }
         }
@@ -410,7 +416,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return bool
      */
     public function fileExists(string $path): bool
@@ -423,12 +429,13 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return Util::normalizePath($item->path()) === Util::normalizePath($path);
         })->toArray();
 
-        return (bool)count($count);
+        return (bool) count($count);
     }
 
     /**
      * getURL method for Laravel users who want to use BunnyCDN's PullZone to retrieve a public URL
-     * @param string $path
+     *
+     * @param  string  $path
      * @return string
      * @codeCoverageIgnore
      */
@@ -438,7 +445,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         }
 
-        return rtrim($this->pullzone_url, '/') . '/' . ltrim($path, '/');
+        return rtrim($this->pullzone_url, '/').'/'.ltrim($path, '/');
     }
 
     private static function parse_bunny_timestamp(string $timestamp): int
