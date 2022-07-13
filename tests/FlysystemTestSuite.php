@@ -24,6 +24,19 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 {
     const STORAGE_ZONE = 'testing_storage_zone';
 
+    /**
+     * Used for testing protected methods
+     *
+     * https://stackoverflow.com/questions/249664/best-practices-to-test-protected-methods-with-phpunit
+     */
+    public static function callMethod($obj, $name, array $args)
+    {
+        $class = new \ReflectionClass($obj);
+        $method = $class->getMethod($name);
+        $method->setAccessible(true);
+        return $method->invokeArgs($obj, $args);
+    }
+
     public static function createFilesystemAdapter(): FilesystemAdapter
     {
         $filesystem = new Filesystem(new InMemoryFilesystemAdapter());
@@ -112,7 +125,8 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
                 new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
             );
 
-            $this->assertSame('this/is/a/long/sub/directory/source.txt', $adapter->fileSize('this/is/a/long/sub/directory/source.txt')->path());
+            $object = self::callMethod($adapter, 'getObject', ['this/is/a/long/sub/directory/source.txt']);
+            $this->assertSame('this/is/a/long/sub/directory/source.txt', $object->path());
         });
     }
 
