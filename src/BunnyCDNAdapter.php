@@ -299,7 +299,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
         try {
             $object = $this->getObject($path);
 
-            if($object instanceof DirectoryAttributes) {
+            if ($object instanceof DirectoryAttributes) {
                 throw new TypeError();
             }
 

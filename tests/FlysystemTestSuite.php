@@ -12,6 +12,7 @@ use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
+use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
 use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
@@ -292,7 +293,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     {
         $client = new MockClient(self::STORAGE_ZONE, 'api-key');
 
-        for($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             $client->add_response(
                 new Response(200, [], json_encode(
                     [
