@@ -23,6 +23,7 @@ use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\Visibility;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use RuntimeException;
+use TypeError;
 
 class BunnyCDNAdapter implements FilesystemAdapter
 {
@@ -280,6 +281,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone_url ? 'public' : 'private');
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
+        } catch (TypeError $e) {
+            throw new UnableToRetrieveMetadata('Cannot retrieve visibility of folder');
         }
     }
 
@@ -297,7 +300,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             $object = $this->getObject($path);
 
             if ($object instanceof DirectoryAttributes) {
-                throw new UnableToRetrieveMetadata('Cannot retrieve mimetype of folder');
+                throw new TypeError();
             }
 
             /** @var FileAttributes $object */
@@ -320,6 +323,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $object;
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
+        } catch (TypeError $e) {
+            throw new UnableToRetrieveMetadata('Cannot retrieve mimeType of folder');
         }
     }
 
@@ -356,6 +361,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
+        } catch (TypeError $e) {
+            throw new UnableToRetrieveMetadata('Last Modified only accepts files as parameters, not directories');
         }
     }
 
@@ -366,17 +373,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
     public function fileSize(string $path): FileAttributes
     {
         try {
-            $object = $this->getObject($path);
-
-            if ($object instanceof DirectoryAttributes) {
-                // @codeCoverageIgnoreStart
-                throw new UnableToRetrieveMetadata('Cannot retrieve size of folder');
-                // @codeCoverageIgnoreEnd
-            }
-
-            return $object;
+            return $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
+        } catch (TypeError $e) {
+            throw new UnableToRetrieveMetadata('Cannot retrieve size of folder');
         }
     }
 

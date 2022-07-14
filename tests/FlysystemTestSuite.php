@@ -12,6 +12,7 @@ use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
+use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
 use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
@@ -278,5 +279,64 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
         $this->assertIsArray($response);
         $this->assertCount(2, $response);
+    }
+
+    /**
+     * Github Issue - 28
+     * https://github.com/PlatformCommunity/flysystem-bunnycdn/issues/28
+     *
+     * Issue present where a lot of TypeErrors will appear if you ask for lastModified on Directory (returns FileAttributes)
+     *
+     * @throws FilesystemException
+     */
+    public function test_regression_issue_29()
+    {
+        $client = new MockClient(self::STORAGE_ZONE, 'api-key');
+
+        for ($i = 0; $i < 10; $i++) {
+            $client->add_response(
+                new Response(200, [], json_encode(
+                    [
+                        /**
+                         * First with the milliseconds
+                         */
+                        array_merge(
+                            $client::example_folder('/example_folder', self::STORAGE_ZONE),
+                            [
+                                'LastChanged' => date('Y-m-d\TH:i:s.v'),
+                                'DateCreated' => date('Y-m-d\TH:i:s.v'),
+                            ]
+                        ),
+                    ]
+                ))
+            );
+        }
+
+        $adapter = new Filesystem(new BunnyCDNAdapter($client));
+        $exception_count = 0;
+
+        try {
+            $adapter->fileSize('/example_folder');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf(UnableToRetrieveMetadata::class, $e);
+            $exception_count++;
+        }
+
+        try {
+            $adapter->mimeType('/example_folder');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf(UnableToRetrieveMetadata::class, $e);
+            $exception_count++;
+        }
+
+        try {
+            $adapter->lastModified('/example_folder');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf(UnableToRetrieveMetadata::class, $e);
+            $exception_count++;
+        }
+
+        // The fact that PHPUnit makes me do this is 🤬
+        $this->assertEquals(3, $exception_count);
     }
 }
