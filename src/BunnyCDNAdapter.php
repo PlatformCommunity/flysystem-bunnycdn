@@ -282,10 +282,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone_url ? 'public' : 'private');
-        } catch (UnableToReadFile $e) {
+        } catch (UnableToReadFile|TypeError $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError) {
-            throw new UnableToRetrieveMetadata('Cannot retrieve visibility of folder');
         }
     }
 
