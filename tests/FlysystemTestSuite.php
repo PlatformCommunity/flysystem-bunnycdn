@@ -87,11 +87,6 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         $this->markTestSkipped('No visibility supported');
     }
 
-    public function listing_contents_recursive(): void
-    {
-        $this->markTestSkipped('No recursive supported');
-    }
-
     /**
      * @test
      */

@@ -113,15 +113,15 @@ class BunnyCDNAdapter implements FilesystemAdapter
         // @codeCoverageIgnoreEnd
 
         foreach ($entries as $item) {
-            yield $this->normalizeObject($item);
+            $content = $this->normalizeObject($item);
+            yield $content;
+
+            if ($deep && $content instanceof DirectoryAttributes) {
+                foreach ($this->listContents($content->path(), $deep) as $deepItem) {
+                    yield $deepItem;
+                }
+            }
         }
-
-//        return new DirectoryListing($contents, $deep);
-//        return array_map(function($item) {
-//            return $this->normalizeObject($item);
-//        }, $entries);
-
-//        return $entries;
     }
 
     /**
