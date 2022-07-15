@@ -330,7 +330,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return mixed
      */
     protected function getObject(string $path = ''): StorageAttributes
