@@ -217,12 +217,17 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * @param $path
      * @return resource
      *
-     * @throws Exceptions\BunnyCDNException
-     * @throws Exceptions\NotFoundException
+     * @throws UnableToReadFile
      */
     public function readStream($path)
     {
-        return $this->client->stream($path);
+        try {
+            return $this->client->stream($path);
+            // @codeCoverageIgnoreStart
+        } catch (Exceptions\BunnyCDNException|Exceptions\NotFoundException $e) {
+            throw UnableToReadFile::fromLocation($path, $e->getMessage());
+        }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
