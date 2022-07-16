@@ -4,6 +4,11 @@
 
 [![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v1?label=Flysystem%20v1&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v2?label=Flysystem%20v2&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v1](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v3?label=Flysystem%20v3&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) <br />[![Codecov](https://img.shields.io/codecov/c/github/PlatformCommunity/flysystem-bunnycdn)](https://codecov.io/gh/PlatformCommunity/flysystem-bunnycdn) [![Packagist Version](https://img.shields.io/packagist/v/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn) ![Minimum PHP Version: 7.4](https://img.shields.io/badge/php-min%207.4-important) [![Licence: MIT](https://img.shields.io/packagist/l/platformcommunity/flysystem-bunnycdn)](https://github.com/PlatformCommunity/flysystem-bunnycdn/blob/master/LICENSE) [![Downloads](https://img.shields.io/packagist/dm/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn)
 
+
+<a href="https://twitter.com/sifex/status/1548374115815346178">
+<img src="https://github.com/sifex/sla-timer/raw/HEAD/.github/assets/hiring.svg?" height="49" alt="Logo for SLA Timer">
+</a>
+
 ## ⚠️ Note – Breaking Change 
 
 > ⚠️ (21/Feb/22) As the upstream BunnyCDNStorage client has gone sometime without an update, it's become unsustainable to continue to use. For all updates, simply change the `BunnyCDNStorage` to `BunnyCDNClient` and re-import. ⚠️
