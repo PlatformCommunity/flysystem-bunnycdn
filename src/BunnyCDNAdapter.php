@@ -40,13 +40,20 @@ class BunnyCDNAdapter implements FilesystemAdapter
     private BunnyCDNClient $client;
 
     /**
+     * @var string
+     */
+    private string $prefixPath;
+
+    /**
      * @param  BunnyCDNClient  $client
      * @param  string  $pullzone_url
+     * @param  string  $prefixPath
      */
-    public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
+    public function __construct(BunnyCDNClient $client, string $pullzone_url = '', string $prefixPath = '')
     {
         $this->client = $client;
         $this->pullzone_url = $pullzone_url;
+        $this->prefixPath = rtrim($prefixPath, '/');
     }
 
     /**
@@ -57,6 +64,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function copy($source, $destination, Config $config): void
     {
+        $this->prependPrefix($source);
+        $this->prependPrefix($destination);
+
         try {
             $this->write($destination, $this->read($source), new Config());
             // @codeCoverageIgnoreStart
@@ -73,6 +83,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function write($path, $contents, Config $config): void
     {
+        $this->prependPrefix($path);
+
         try {
             $this->client->upload($path, $contents);
             // @codeCoverageIgnoreStart
@@ -88,6 +100,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function read($path): string
     {
+        $this->prependPrefix($path);
+
         try {
             return $this->client->download($path);
             // @codeCoverageIgnoreStart
@@ -104,6 +118,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function listContents(string $path = '', bool $deep = false): iterable
     {
+        $this->prependPrefix($path);
+
         try {
             $entries = $this->client->list($path);
             // @codeCoverageIgnoreStart
@@ -190,6 +206,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function detectMimeType(string $path): string
     {
+        $this->prependPrefix($path);
+
         try {
             $detector = new FinfoMimeTypeDetector();
             $mimeType = $detector->detectMimeTypeFromPath($path);
@@ -212,6 +230,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function writeStream($path, $contents, Config $config): void
     {
+        $this->prependPrefix($path);
+
         $this->write($path, stream_get_contents($contents), $config);
     }
 
@@ -233,6 +253,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function deleteDirectory(string $path): void
     {
+        $this->prependPrefix($path);
+
         try {
             $this->client->delete(
                 rtrim($path, '/').'/'
@@ -250,6 +272,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function createDirectory(string $path, Config $config): void
     {
+        $this->prependPrefix($path);
+
         try {
             $this->client->make_directory($path);
             // @codeCoverageIgnoreStart
@@ -269,6 +293,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function setVisibility(string $path, string $visibility): void
     {
+        $this->prependPrefix($path);
+
         throw UnableToSetVisibility::atLocation($path, 'BunnyCDN does not support visibility');
     }
 
@@ -277,6 +303,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function visibility(string $path): FileAttributes
     {
+        $this->prependPrefix($path);
+
         try {
             return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone_url ? 'public' : 'private');
         } catch (UnableToReadFile $e) {
@@ -296,6 +324,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function mimeType(string $path): FileAttributes
     {
+        $this->prependPrefix($path);
+
         try {
             $object = $this->getObject($path);
 
@@ -334,6 +364,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     protected function getObject(string $path = ''): StorageAttributes
     {
+        $this->prependPrefix($path);
+
         $directory = pathinfo($path, PATHINFO_DIRNAME);
         $list = (new DirectoryListing($this->listContents($directory)))
             ->filter(function (StorageAttributes $item) use ($path) {
@@ -357,6 +389,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function lastModified(string $path): FileAttributes
     {
+        $this->prependPrefix($path);
+
         try {
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
@@ -372,6 +406,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function fileSize(string $path): FileAttributes
     {
+        $this->prependPrefix($path);
+
         try {
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
@@ -387,6 +423,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function move(string $source, string $destination, Config $config): void
     {
+        $this->prependPrefix($source);
+        $this->prependPrefix($destination);
+
         try {
             $this->write($destination, $this->read($source), new Config());
             $this->delete($source);
@@ -401,6 +440,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function delete($path): void
     {
+        $this->prependPrefix($path);
+
         try {
             $this->client->delete($path);
             // @codeCoverageIgnoreStart
@@ -426,6 +467,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function fileExists(string $path): bool
     {
+        $this->prependPrefix($path);
+
         $list = new DirectoryListing($this->listContents(
             Util::splitPathIntoDirectoryAndFile($path)['dir']
         ));
@@ -456,5 +499,22 @@ class BunnyCDNAdapter implements FilesystemAdapter
     private static function parse_bunny_timestamp(string $timestamp): int
     {
         return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
+    }
+
+    private function prependPrefix(string &$path): void
+    {
+        if ($this->prefixPath === '') {
+            return;
+        }
+
+        if ($path === $this->prefixPath) {
+            return;
+        }
+
+        if (\str_starts_with($path, $this->prefixPath.'/')) {
+            return;
+        }
+
+        $path = $this->prefixPath.'/'.$path;
     }
 }
