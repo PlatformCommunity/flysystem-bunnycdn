@@ -2,6 +2,7 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
+use Exception;
 use League\Flysystem\Config;
 use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\DirectoryListing;
@@ -113,15 +114,15 @@ class BunnyCDNAdapter implements FilesystemAdapter
         // @codeCoverageIgnoreEnd
 
         foreach ($entries as $item) {
-            yield $this->normalizeObject($item);
+            $content = $this->normalizeObject($item);
+            yield $content;
+
+            if ($deep && $content instanceof DirectoryAttributes) {
+                foreach ($this->listContents($content->path(), $deep) as $deepItem) {
+                    yield $deepItem;
+                }
+            }
         }
-
-//        return new DirectoryListing($contents, $deep);
-//        return array_map(function($item) {
-//            return $this->normalizeObject($item);
-//        }, $entries);
-
-//        return $entries;
     }
 
     /**
@@ -184,9 +185,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      *
      * @param  string  $path
      * @return string
-     *
-     * @throws Exceptions\BunnyCDNException
-     * @throws Exceptions\NotFoundException
      */
     public function detectMimeType(string $path): string
     {
@@ -199,7 +197,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             }
 
             return $mimeType;
-        } catch (\Exception $e) {
+        } catch (Exception) {
             return '';
         }
     }
@@ -219,12 +217,17 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * @param $path
      * @return resource
      *
-     * @throws Exceptions\BunnyCDNException
-     * @throws Exceptions\NotFoundException
+     * @throws UnableToReadFile
      */
     public function readStream($path)
     {
-        return $this->client->stream($path);
+        try {
+            return $this->client->stream($path);
+            // @codeCoverageIgnoreStart
+        } catch (Exceptions\BunnyCDNException|Exceptions\NotFoundException $e) {
+            throw UnableToReadFile::fromLocation($path, $e->getMessage());
+        }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -279,10 +282,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         try {
             return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone_url ? 'public' : 'private');
-        } catch (UnableToReadFile $e) {
+        } catch (UnableToReadFile|TypeError $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError $e) {
-            throw new UnableToRetrieveMetadata('Cannot retrieve visibility of folder');
         }
     }
 
@@ -290,8 +291,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * @param  string  $path
      * @return FileAttributes
      *
-     * @throws Exceptions\BunnyCDNException
-     * @throws Exceptions\NotFoundException
      * @codeCoverageIgnore
      */
     public function mimeType(string $path): FileAttributes
@@ -323,13 +322,13 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $object;
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError $e) {
+        } catch (TypeError) {
             throw new UnableToRetrieveMetadata('Cannot retrieve mimeType of folder');
         }
     }
 
     /**
-     * @param $path
+     * @param  string  $path
      * @return mixed
      */
     protected function getObject(string $path = ''): StorageAttributes
@@ -342,13 +341,15 @@ class BunnyCDNAdapter implements FilesystemAdapter
 
         if (count($list) === 1) {
             return $list[0];
-        } elseif (count($list) > 1) {
+        }
+
+        if (count($list) > 1) {
             // @codeCoverageIgnoreStart
             throw UnableToReadFile::fromLocation($path, 'More than one file was returned for path:"'.$path.'", contact package author.');
-        // @codeCoverageIgnoreEnd
-        } else {
-            throw UnableToReadFile::fromLocation($path, 'Error 404:"'.$path.'"');
+            // @codeCoverageIgnoreEnd
         }
+
+        throw UnableToReadFile::fromLocation($path, 'Error 404:"'.$path.'"');
     }
 
     /**
@@ -361,7 +362,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError $e) {
+        } catch (TypeError) {
             throw new UnableToRetrieveMetadata('Last Modified only accepts files as parameters, not directories');
         }
     }
@@ -376,7 +377,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError $e) {
+        } catch (TypeError) {
             throw new UnableToRetrieveMetadata('Cannot retrieve size of folder');
         }
     }
@@ -443,6 +444,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * @param  string  $path
      * @return string
      * @codeCoverageIgnore
+     * @noinspection PhpUnused
      */
     public function getUrl(string $path): string
     {
