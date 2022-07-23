@@ -24,6 +24,21 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     const STORAGE_ZONE = 'testing_storage_zone';
 
     /**
+     * @var FilesystemAdapter|null
+     */
+    protected static ?FilesystemAdapter $prefixAdapter = null;
+
+    /**
+     * @var BunnyCDNClient|null
+     */
+    protected static ?BunnyCDNClient $bunnyCDNClient = null;
+
+    /**
+     * @var string|null
+     */
+    protected static ?string $prefixPath = null;
+
+    /**
      * Used for testing protected methods
      *
      * https://stackoverflow.com/questions/249664/best-practices-to-test-protected-methods-with-phpunit
@@ -37,8 +52,26 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         return $method->invokeArgs($obj, $args);
     }
 
-    public static function createFilesystemAdapter(): FilesystemAdapter
+    public static function setUpBeforeClass(): void
     {
+        static::$prefixPath = 'test'.bin2hex(random_bytes(10));
+    }
+
+    public function prefixAdapter(): FilesystemAdapter
+    {
+        if (! static::$prefixAdapter instanceof FilesystemAdapter) {
+            static::$prefixAdapter = static::createFilesystemAdapter(static::$prefixPath);
+        }
+
+        return static::$prefixAdapter;
+    }
+
+    private static function bunnyCDNClient(): BunnyCDNClient
+    {
+        if (static::$bunnyCDNClient instanceof BunnyCDNClient) {
+            return static::$bunnyCDNClient;
+        }
+
         $filesystem = new Filesystem(new InMemoryFilesystemAdapter());
 
         $mock_client = Mockery::mock(new BunnyCDNClient(self::STORAGE_ZONE, 'api-key'));
@@ -68,7 +101,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         });
 
         $mock_client->shouldReceive('make_directory')->andReturnUsing(function ($path) use ($filesystem) {
-            return $filesystem->createDirectory($path);
+            $filesystem->createDirectory($path);
         });
 
         $mock_client->shouldReceive('delete')->andReturnUsing(function ($path) use ($filesystem) {
@@ -76,7 +109,95 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             $filesystem->delete($path);
         });
 
-        return new BunnyCDNAdapter($mock_client);
+        static::$bunnyCDNClient = $mock_client;
+
+        return static::$bunnyCDNClient;
+    }
+
+    public static function createFilesystemAdapter(string $prefixPath = ''): FilesystemAdapter
+    {
+        return new BunnyCDNAdapter(static::bunnyCDNClient(), '', $prefixPath);
+    }
+
+    /**
+     * @test
+     */
+    public function prefix_path(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $prefixPathAdapter = $this->prefixAdapter();
+
+            self::assertNotEmpty(
+                static::$prefixPath
+            );
+
+            self::assertIsString(
+                static::$prefixPath
+            );
+
+            $content = 'this is test';
+            $prefixPathAdapter->write(
+                'source.file.svg',
+                $content,
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            self::assertTrue($prefixPathAdapter->fileExists(
+                'source.file.svg'
+            ));
+
+            self::assertTrue($adapter->directoryExists(
+                static::$prefixPath
+            ));
+
+            self::assertTrue($adapter->fileExists(
+                static::$prefixPath.'/source.file.svg'
+            ));
+
+            $prefixPathAdapter->copy(
+                'source.file.svg',
+                'source.copy.file.svg',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            self::assertTrue($adapter->fileExists(
+                static::$prefixPath.'/source.copy.file.svg'
+            ));
+
+            self::assertTrue($prefixPathAdapter->fileExists(
+                'source.copy.file.svg'
+            ));
+
+            $prefixPathAdapter->delete(
+                'source.copy.file.svg'
+            );
+
+            $this->assertEquals($content, $prefixPathAdapter->read('source.file.svg'));
+
+            $this->assertEquals(
+                $prefixPathAdapter->read('source.file.svg'),
+                $adapter->read(static::$prefixPath.'/source.file.svg')
+            );
+
+            $this->assertSame(
+                'image/svg+xml',
+                $prefixPathAdapter->mimeType('source.file.svg')->mimeType()
+            );
+
+            $this->assertEquals(
+                $prefixPathAdapter->mimeType('source.file.svg')->mimeType(),
+                $adapter->mimeType(static::$prefixPath.'/source.file.svg')->mimeType()
+            );
+
+            $prefixPathAdapter->delete(
+                'source.file.svg'
+            );
+
+            self::assertFalse($prefixPathAdapter->fileExists(
+                'source.file.svg'
+            ));
+        });
     }
 
     /**
