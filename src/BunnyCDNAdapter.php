@@ -147,6 +147,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     protected function normalizeObject(array $bunny_file_array): StorageAttributes
     {
+        $bunny_file_array['Path'] = str_replace($this->prefixPath, '', $bunny_file_array['Path']);
+
         return match ($bunny_file_array['IsDirectory']) {
             true => new DirectoryAttributes(
                 Util::normalizePath(
@@ -241,6 +243,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function readStream($path)
     {
+        $this->prependPrefix($path);
+
         try {
             return $this->client->stream($path);
             // @codeCoverageIgnoreStart
@@ -306,8 +310,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function visibility(string $path): FileAttributes
     {
-        $this->prependPrefix($path);
-
         try {
             return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone_url ? 'public' : 'private');
         } catch (UnableToReadFile|TypeError $e) {
@@ -323,8 +325,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function mimeType(string $path): FileAttributes
     {
-        $this->prependPrefix($path);
-
         try {
             $object = $this->getObject($path);
 
@@ -363,8 +363,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     protected function getObject(string $path = ''): StorageAttributes
     {
-        $this->prependPrefix($path);
-
         $directory = pathinfo($path, PATHINFO_DIRNAME);
         $list = (new DirectoryListing($this->listContents($directory)))
             ->filter(function (StorageAttributes $item) use ($path) {
@@ -390,8 +388,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function lastModified(string $path): FileAttributes
     {
-        $this->prependPrefix($path);
-
         try {
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
@@ -407,8 +403,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function fileSize(string $path): FileAttributes
     {
-        $this->prependPrefix($path);
-
         try {
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
@@ -468,8 +462,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function fileExists(string $path): bool
     {
-        $this->prependPrefix($path);
-
         $list = new DirectoryListing($this->listContents(
             Util::splitPathIntoDirectoryAndFile($path)['dir']
         ));
