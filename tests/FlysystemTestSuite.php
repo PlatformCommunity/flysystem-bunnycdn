@@ -2,7 +2,6 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
-use Faker\Provider\File;
 use GuzzleHttp\Psr7\Response;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
@@ -69,6 +68,12 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         if (static::$bunnyCDNClient instanceof BunnyCDNClient) {
+            return static::$bunnyCDNClient;
+        }
+
+        if (isset($_SERVER['STORAGEZONE'], $_SERVER['APIKEY'])) {
+            static::$bunnyCDNClient = new BunnyCDNClient($_SERVER['STORAGEZONE'], $_SERVER['APIKEY']);
+
             return static::$bunnyCDNClient;
         }
 
