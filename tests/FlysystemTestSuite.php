@@ -2,7 +2,6 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
-use Faker\Provider\File;
 use GuzzleHttp\Psr7\Response;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
@@ -69,6 +68,12 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         if (static::$bunnyCDNClient instanceof BunnyCDNClient) {
+            return static::$bunnyCDNClient;
+        }
+
+        if (isset($_SERVER['STORAGEZONE'], $_SERVER['APIKEY'])) {
+            static::$bunnyCDNClient = new BunnyCDNClient($_SERVER['STORAGEZONE'], $_SERVER['APIKEY']);
+
             return static::$bunnyCDNClient;
         }
 
@@ -180,6 +185,13 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
                 $adapter->read(static::$prefixPath.'/source.file.svg')
             );
 
+            $this->assertEquals($content, stream_get_contents($prefixPathAdapter->readStream('source.file.svg')));
+
+            $this->assertEquals(
+                stream_get_contents($prefixPathAdapter->readStream('source.file.svg')),
+                stream_get_contents($adapter->readStream(static::$prefixPath.'/source.file.svg'))
+            );
+
             $this->assertSame(
                 'image/svg+xml',
                 $prefixPathAdapter->mimeType('source.file.svg')->mimeType()
@@ -190,6 +202,26 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
                 $adapter->mimeType(static::$prefixPath.'/source.file.svg')->mimeType()
             );
 
+            $this->assertGreaterThan(
+                0,
+                $prefixPathAdapter->fileSize('source.file.svg')->fileSize()
+            );
+
+            $this->assertEquals(
+                $prefixPathAdapter->fileSize('source.file.svg')->fileSize(),
+                $adapter->fileSize(static::$prefixPath.'/source.file.svg')->fileSize()
+            );
+
+            $this->assertGreaterThan(
+                time() - 30,
+                $prefixPathAdapter->lastModified('source.file.svg')->lastModified()
+            );
+
+            $this->assertEquals(
+                $prefixPathAdapter->lastModified('source.file.svg')->lastModified(),
+                $adapter->lastModified(static::$prefixPath.'/source.file.svg')->lastModified()
+            );
+
             $prefixPathAdapter->delete(
                 'source.file.svg'
             );
@@ -197,6 +229,34 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             self::assertFalse($prefixPathAdapter->fileExists(
                 'source.file.svg'
             ));
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function prefix_path_not_in_meta_pr_36(): void
+    {
+        $this->runScenario(function () {
+            $prefixPathAdapter = $this->prefixAdapter();
+
+            $prefixPathAdapter->write(
+                'source.file.svg',
+                '----',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            $this->assertSame(
+                'source.file.svg',
+                $prefixPathAdapter->mimeType('source.file.svg')->path()
+            );
+
+            $contents = \iterator_to_array($prefixPathAdapter->listContents('/'));
+
+            $this->assertCount(1, $contents);
+            $this->assertSame('source.file.svg', $contents[0]['path']);
+
+            $prefixPathAdapter->delete('source.file.svg');
         });
     }
 
