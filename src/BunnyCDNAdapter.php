@@ -172,7 +172,7 @@ class BunnyCDNAdapter extends AbstractAdapter
     public function read($path)
     {
         try {
-            return array_merge($this->getMetadata($path) ? $this->getMetadata($path) : [], [
+            return array_merge($this->getMetadata($path) ?: [], [
                 'contents' => $this->client->download($path)
             ]);
         } catch (Exceptions\BunnyCDNException $e) {
@@ -200,16 +200,33 @@ class BunnyCDNAdapter extends AbstractAdapter
      * @param string $directory
      * @param bool $recursive
      * @return array|false
-     * @throws BunnyCDNException
      */
     public function listContents($directory = '', $recursive = false)
     {
-        try {
-            return array_map(function($item) {
-                return $this->normalizeObject($item);
-            }, $this->client->list($directory));
-        } catch (NotFoundException $e) {
+        $contents = $this->listContentsHelper($directory, $recursive);
+        if ($contents === false) {
             return false;
+        }
+
+        return \iterator_to_array($contents);
+    }
+
+    private function listContentsHelper($directory = '', $recursive = false) {
+        try {
+            $entries = $this->client->list($directory);
+        } catch (Exceptions\BunnyCDNException $e) {
+            return false;
+        }
+
+        foreach ($entries as $item) {
+            $content = $this->normalizeObject($item);
+            yield $content;
+
+            if ($recursive && $content['type'] === 'dir') {
+                foreach ($this->listContentsHelper($content['path'], $recursive) as $deepItem) {
+                    yield $deepItem;
+                }
+            }
         }
     }
 

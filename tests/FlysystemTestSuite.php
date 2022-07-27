@@ -4,6 +4,7 @@ namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use Exception;
 use GuzzleHttp\Psr7\Response;
+use League\Flysystem\AdapterInterface;
 use League\Flysystem\Config;
 use League\Flysystem\FileExistsException;
 use League\Flysystem\FileNotFoundException;
@@ -33,16 +34,66 @@ class FlysystemTestSuite extends TestCase
      */
     protected $adapter;
 
+    /**
+     * @var AdapterInterface|null
+     */
+    protected $prefixAdapter;
+
+    /**
+     * @var BunnyCDNClient|null
+     */
+    protected static $bunnyCDNClient;
+
+    /**
+     * @var string|null
+     */
+    protected static $prefixPath;
+
     protected function setUp(): void
     {
         $this->adapter = self::createFilesystemAdapter();
+        $this->prefixAdapter = self::createPrefixFilesystemAdapter();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        $this->adapter->deleteDir('/');
+    }
+
+    public static function setUpBeforeClass(): void
+    {
+        static::$prefixPath = 'test'.bin2hex(random_bytes(10));
+    }
+
+    /**
+     * @param string $prefixPath
+     * @return BunnyCDNAdapter
+     */
+    protected static function createFilesystemAdapter(string $prefixPath = ''): BunnyCDNAdapter
+    {
+        return new BunnyCDNAdapter(static::bunnyCDNClient(), self::PULLZONE_URL, $prefixPath);
     }
 
     /**
      * @return BunnyCDNAdapter
      */
-    protected static function createFilesystemAdapter()
+    public static function createPrefixFilesystemAdapter(): BunnyCDNAdapter
     {
+        return static::createFilesystemAdapter(static::$prefixPath);
+    }
+
+    private static function bunnyCDNClient(): BunnyCDNClient
+    {
+        if (static::$bunnyCDNClient instanceof BunnyCDNClient) {
+            return static::$bunnyCDNClient;
+        }
+
+        if (isset($_SERVER['STORAGEZONE'], $_SERVER['APIKEY'])) {
+            static::$bunnyCDNClient = new BunnyCDNClient($_SERVER['STORAGEZONE'], $_SERVER['APIKEY']);
+
+            return static::$bunnyCDNClient;
+        }
+
         $filesystem = new Filesystem(new MemoryAdapter());
 
         $mock_client = Mockery::mock(
@@ -93,7 +144,9 @@ class FlysystemTestSuite extends TestCase
             }
         });
 
-        return new BunnyCDNAdapter($mock_client, self::PULLZONE_URL);
+        static::$bunnyCDNClient = $mock_client;
+
+        return static::$bunnyCDNClient;
     }
 
     public function givenItHasFile($path, $contents = self::TEST_FILE_CONTENTS)
@@ -223,6 +276,17 @@ class FlysystemTestSuite extends TestCase
         self::assertIsArray(
             $this->adapter->listContents('/')[0]
         );
+
+        self::assertCount(
+            2, $this->adapter->listContents('/', true)
+        );
+
+        $this->givenItHasFile('/testing/test2.txt');
+
+        self::assertCount(
+            3, $this->adapter->listContents('/', true)
+        );
+
         $this->assertHasMetadataKeys(
             $this->adapter->listContents('/')[0]
         );
