@@ -104,9 +104,9 @@ class BunnyCDNClient
         } catch (GuzzleException $e) {
             if($e->getCode() === 404) {
                 throw new NotFoundException($e->getMessage());
-            } else {
-                throw new BunnyCDNException($e->getMessage());
             }
+
+            throw new BunnyCDNException($e->getMessage());
         }
     }
 

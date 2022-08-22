@@ -32,12 +32,12 @@ class FlysystemTestSuite extends TestCase
     /**
      * The memory adapter;
      */
-    protected $adapter;
+    protected static $adapter;
 
     /**
      * @var AdapterInterface|null
      */
-    protected $prefixAdapter;
+    protected static $prefixAdapter;
 
     /**
      * @var BunnyCDNClient|null
@@ -51,13 +51,13 @@ class FlysystemTestSuite extends TestCase
 
     protected function setUp(): void
     {
-        $this->adapter = self::createFilesystemAdapter();
-        $this->prefixAdapter = self::createPrefixFilesystemAdapter();
+        self::$adapter = self::createFilesystemAdapter();
+        self::$prefixAdapter = self::createPrefixFilesystemAdapter();
     }
 
     public static function tearDownAfterClass(): void
     {
-        $this->adapter->deleteDir('/');
+        self::$adapter->deleteDir('/');
     }
 
     public static function setUpBeforeClass(): void
@@ -149,9 +149,10 @@ class FlysystemTestSuite extends TestCase
         return static::$bunnyCDNClient;
     }
 
-    public function givenItHasFile($path, $contents = self::TEST_FILE_CONTENTS)
+    public function givenItHasFile(AdapterInterface $adapter, $path, $contents = self::TEST_FILE_CONTENTS): void
     {
-        $this->adapter->write($path, $contents, new Config());
+        $adapter->delete($path);
+        $adapter->write($path, $contents, new Config());
     }
 
     /**
@@ -161,11 +162,38 @@ class FlysystemTestSuite extends TestCase
     public function it_write()
     {
         self::assertTrue(
-            $this->adapter->write('testing/test.txt', 'Testing.txt', new Config())
+            self::$adapter->write('testing/test.txt', 'Testing.txt', new Config())
         );
 
         self::assertTrue(
-            $this->adapter->write('testing/test.txt', self::TEST_FILE_CONTENTS, new Config())
+            self::$adapter->write('testing/test.txt', self::TEST_FILE_CONTENTS, new Config())
+        );
+    }
+
+    /**
+     * @test
+     * @throws Exception
+     */
+    public function it_prefix_write()
+    {
+        self::assertFalse(
+            self::$adapter->has(self::$prefixPath . '/testing/test.txt')
+        );
+
+        self::assertFalse(
+            self::$prefixAdapter->has('/testing/test.txt')
+        );
+
+        self::assertTrue(
+            self::$prefixAdapter->write('/testing/test.txt', 'Testing.txt', new Config())
+        );
+
+        self::assertTrue(
+            self::$adapter->has(self::$prefixPath . '/testing/test.txt')
+        );
+
+        self::assertTrue(
+            self::$adapter->deleteDir(self::$prefixPath)
         );
     }
 
@@ -175,9 +203,9 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_has()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
-        self::assertTrue($this->adapter->has('/testing/test.txt'));
+        self::assertTrue(self::$adapter->has('/testing/test.txt'));
     }
 
     /**
@@ -186,11 +214,11 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_has_slash_prefix()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
-        self::assertTrue($this->adapter->has('/testing/test.txt'));
-        self::assertTrue($this->adapter->has('//testing/test.txt'));
-        self::assertTrue($this->adapter->has('///testing/test.txt'));
+        self::assertTrue(self::$adapter->has('/testing/test.txt'));
+        self::assertTrue(self::$adapter->has('//testing/test.txt'));
+        self::assertTrue(self::$adapter->has('///testing/test.txt'));
     }
 
     /**
@@ -199,11 +227,42 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_has_inverse()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
-        self::assertFalse($this->adapter->has('/not_in_test_files.txt'));
-        self::assertFalse($this->adapter->has('not_a_directory'));
-        self::assertFalse($this->adapter->has('not_a_testing/test.txt'));
+        self::assertFalse(self::$adapter->has('/not_in_test_files.txt'));
+        self::assertFalse(self::$adapter->has('not_a_directory'));
+        self::assertFalse(self::$adapter->has('not_a_testing/test.txt'));
+    }
+
+    /**
+     * @test
+     * @throws Exception
+     */
+    public function it_prefix_read()
+    {
+        self::assertFalse(
+            self::$adapter->has(self::$prefixPath . '/testing/test.txt')
+        );
+
+        self::assertFalse(
+            self::$prefixAdapter->has('/testing/test.txt')
+        );
+
+        $this->givenItHasFile(self::$prefixAdapter, '/testing/test.txt');
+
+        self::assertEquals(
+            self::TEST_FILE_CONTENTS,
+            self::$prefixAdapter->read('/testing/test.txt')['contents']
+        );
+
+        self::assertEquals(
+            self::TEST_FILE_CONTENTS,
+            self::$adapter->read(self::$prefixPath . '/testing/test.txt')['contents']
+        );
+
+        self::assertTrue(
+            self::$adapter->deleteDir(self::$prefixPath)
+        );
     }
 
     /**
@@ -212,12 +271,11 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_read()
     {
-
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertEquals(
             self::TEST_FILE_CONTENTS,
-            $this->adapter->read('/testing/test.txt')['contents']
+            self::$adapter->read('/testing/test.txt')['contents']
         );
     }
 
@@ -227,9 +285,9 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_delete()
     {
-        self::assertTrue($this->adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
-        self::assertTrue($this->adapter->delete('/testing/test.txt'));
-        self::assertTrue($this->adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
+        self::assertTrue(self::$adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
+        self::assertTrue(self::$adapter->delete('/testing/test.txt'));
+        self::assertTrue(self::$adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
     }
 
     /**
@@ -239,8 +297,8 @@ class FlysystemTestSuite extends TestCase
     public function it_delete_dir()
     {
 
-        self::assertTrue($this->adapter->createDir('testing_for_deletion',  new Config()));
-        self::assertTrue($this->adapter->deleteDir('testing_for_deletion'));
+        self::assertTrue(self::$adapter->createDir('testing_for_deletion',  new Config()));
+        self::assertTrue(self::$adapter->deleteDir('testing_for_deletion'));
     }
 
     /**
@@ -251,14 +309,14 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_copy()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertTrue(
-            $this->adapter->copy('testing/test.txt', 'testing/test_copied.txt')
+            self::$adapter->copy('testing/test.txt', 'testing/test_copied.txt')
         );
 
         self::assertTrue(
-            $this->adapter->delete('testing/test_copied.txt')
+            self::$adapter->delete('testing/test_copied.txt')
         );
     }
 
@@ -268,27 +326,27 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_list_contents()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertIsArray(
-            $this->adapter->listContents('/')
+            self::$adapter->listContents('/')
         );
         self::assertIsArray(
-            $this->adapter->listContents('/')[0]
+            self::$adapter->listContents('/')[0]
         );
 
         self::assertCount(
-            2, $this->adapter->listContents('/', true)
+            2, self::$adapter->listContents('/', true)
         );
 
-        $this->givenItHasFile('/testing/test2.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test2.txt');
 
         self::assertCount(
-            3, $this->adapter->listContents('/', true)
+            3, self::$adapter->listContents('/', true)
         );
 
         $this->assertHasMetadataKeys(
-            $this->adapter->listContents('/')[0]
+            self::$adapter->listContents('/')[0]
         );
     }
 
@@ -299,7 +357,7 @@ class FlysystemTestSuite extends TestCase
     public function it_list_contents_empty()
     {
         self::assertIsArray(
-            $this->adapter->listContents('/')
+            self::$adapter->listContents('/')
         );
     }
 
@@ -309,10 +367,10 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_get_size()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertIsNumeric(
-            $this->adapter->getSize('testing/test.txt')['size']
+            self::$adapter->getSize('testing/test.txt')['size']
         );
     }
 
@@ -323,14 +381,14 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_rename()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertTrue(
-            $this->adapter->rename('testing/test.txt', 'testing/test_renamed.txt')
+            self::$adapter->rename('testing/test.txt', 'testing/test_renamed.txt')
         );
 
         self::assertTrue(
-            $this->adapter->rename('testing/test_renamed.txt', 'testing/test.txt')
+            self::$adapter->rename('testing/test_renamed.txt', 'testing/test.txt')
         );
     }
 
@@ -340,10 +398,10 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_update()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertTrue(
-            $this->adapter->update('testing/test.txt', self::TEST_FILE_CONTENTS, new Config())
+            self::$adapter->update('testing/test.txt', self::TEST_FILE_CONTENTS, new Config())
         );
     }
 
@@ -354,11 +412,11 @@ class FlysystemTestSuite extends TestCase
     public function it_create_dir()
     {
         self::assertTrue(
-            $this->adapter->createDir('testing_created/', new Config())
+            self::$adapter->createDir('testing_created/', new Config())
         );
 
         self::assertTrue(
-            $this->adapter->deleteDir('testing_created/')
+            self::$adapter->deleteDir('testing_created/')
         );
     }
 
@@ -368,10 +426,10 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_get_timestamp()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertIsNumeric(
-            $this->adapter->getTimestamp('testing/test.txt')['timestamp']
+            self::$adapter->getTimestamp('testing/test.txt')['timestamp']
         );
     }
 
@@ -381,9 +439,9 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_can_retrieve_metadata()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
-        $metadata = $this->adapter->getMetadata('testing/test.txt');
+        $metadata = self::$adapter->getMetadata('testing/test.txt');
 
         $this->assertHasMetadataKeys($metadata);
     }
@@ -413,8 +471,8 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_tests_flysystem_compatibility()
     {
-        $filesystem = new Filesystem($this->adapter);
-        $this->givenItHasFile('/testing/test.txt');
+        $filesystem = new Filesystem(self::$adapter);
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         self::assertTrue($filesystem->createDir("test"));
         self::assertTrue($filesystem->deleteDir("test"));
@@ -426,11 +484,11 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_get_public_url()
     {
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
-        $this->assertEquals(self::PULLZONE_URL . 'testing/test.txt', $this->adapter->getUrl('/testing/test.txt'));
+        $this->assertEquals(self::PULLZONE_URL . 'testing/test.txt', self::$adapter->getUrl('/testing/test.txt'));
 
-        $this->adapter->getUrl('/testing/test.txt');
+        self::$adapter->getUrl('/testing/test.txt');
     }
 
     /**
@@ -443,7 +501,7 @@ class FlysystemTestSuite extends TestCase
             new BunnyCDNClient(self::STORAGE_ZONE, 'api-key')
         );
 
-        $this->givenItHasFile('/testing/test.txt');
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
 
         $this->expectException(RuntimeException::class);
 

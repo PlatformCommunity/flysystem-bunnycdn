@@ -34,13 +34,20 @@ class BunnyCDNAdapter extends AbstractAdapter
     private $client;
 
     /**
+     * @var string
+     */
+    private $prefixPath;
+
+    /**
      * @param BunnyCDNClient $client
      * @param string $pullzone_url
+     * @param string $prefixPath
      */
-    public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
+    public function __construct(BunnyCDNClient $client, string $pullzone_url = '', string $prefixPath = '')
     {
         $this->client = $client;
         $this->pullzone_url = $pullzone_url;
+        $this->prefixPath = $prefixPath;
     }
 
     /**
@@ -51,6 +58,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function write($path, $contents, Config $config): bool
     {
+        $path = $this->prependPrefix($path);
+
         try {
             $this->client->upload($path, $contents);
         } catch (Exceptions\BunnyCDNException $e) {
@@ -68,6 +77,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function update($path, $contents, Config $config): bool
     {
+        $path = $this->prependPrefix($path);
         return $this->write($path, $contents, $config);
     }
 
@@ -78,6 +88,9 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function rename($path, $newpath): bool
     {
+        $path = $this->prependPrefix($path);
+        $newpath = $this->prependPrefix($newpath);
+
         try {
             $this->copy($path, $newpath);
             $this->delete($path);
@@ -94,6 +107,9 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function copy($path, $newpath): bool
     {
+        $path = $this->prependPrefix($path);
+        $newpath = $this->prependPrefix($newpath);
+
         try {
             $this->write($newpath, $this->read($path)['contents'], new Config());
         } catch (BunnyCDNException $exception) {
@@ -109,6 +125,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function delete($path): bool
     {
+        $path = $this->prependPrefix($path);
+
         try {
             $this->client->delete($path);
         } catch (Exceptions\BunnyCDNException $e) {
@@ -125,6 +143,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function deleteDir($dirname): bool
     {
+        $dirname = $this->prependPrefix($dirname);
+
         try {
             $this->client->delete(
                 rtrim($dirname, '/') . '/'
@@ -142,6 +162,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function createDir($dirname, Config $config): bool
     {
+        $dirname = $this->prependPrefix($dirname);
+
         try {
             $this->client->make_directory($dirname);
         } catch (Exceptions\BunnyCDNException $e) {
@@ -161,6 +183,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function has($path): bool
     {
+        $path = $this->prependPrefix($path);
+
         return $this->getMetadata($path) !== false;
     }
 
@@ -171,6 +195,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function read($path)
     {
+        $path = $this->prependPrefix($path);
+
         try {
             return array_merge($this->getMetadata($path) ?: [], [
                 'contents' => $this->client->download($path)
@@ -187,6 +213,8 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function readStream($path)
     {
+        $path = $this->prependPrefix($path);
+
         try {
             return [
                 'stream' => $this->client->stream($path)
@@ -203,6 +231,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function listContents($directory = '', $recursive = false)
     {
+        $directory = $this->prependPrefix($directory);
         $contents = $this->listContentsHelper($directory, $recursive);
         if ($contents === false) {
             return false;
@@ -212,6 +241,8 @@ class BunnyCDNAdapter extends AbstractAdapter
     }
 
     private function listContentsHelper($directory = '', $recursive = false) {
+        $directory = $this->prependPrefix($directory);
+
         try {
             $entries = $this->client->list($directory);
         } catch (Exceptions\BunnyCDNException $e) {
@@ -286,6 +317,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function getMetadata($path)
     {
+        $path = $this->prependPrefix($path);
         $list = array_values(array_filter($this->listContents(
             Util::splitPathIntoDirectoryAndFile(
                 Util::normalizePath($path)
@@ -296,9 +328,9 @@ class BunnyCDNAdapter extends AbstractAdapter
 
         if (count($list) === 1) {
             return $list[0];
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -309,6 +341,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function getSize($path)
     {
+        $path = $this->prependPrefix($path);
         return $this->getMetadata($path);
     }
 
@@ -321,6 +354,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function getMimetype($path)
     {
+        $path = $this->prependPrefix($path);
         return $this->getMetadata($path);
     }
 
@@ -332,6 +366,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function getTimestamp($path)
     {
+        $path = $this->prependPrefix($path);
         return $this->getMetadata($path);
     }
 
@@ -342,6 +377,7 @@ class BunnyCDNAdapter extends AbstractAdapter
      */
     public function getUrl(string $path): string
     {
+        $path = $this->prependPrefix($path);
         if ($this->pullzone_url === '') {
             throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         }
@@ -352,5 +388,22 @@ class BunnyCDNAdapter extends AbstractAdapter
     private static function parse_bunny_timestamp(string $timestamp): int
     {
         return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
+    }
+
+    private function prependPrefix(string $path): string
+    {
+        if ($this->prefixPath === '') {
+            return $path;
+        }
+
+        if ($path === $this->prefixPath) {
+            return $path;
+        }
+
+        if (\strpos($path, $this->prefixPath . '/') === 0) {
+            return $path;
+        }
+
+        return $this->prefixPath . '/' . $path;
     }
 }
