@@ -57,7 +57,7 @@ class FlysystemTestSuite extends TestCase
 
     public static function tearDownAfterClass(): void
     {
-        self::$adapter->deleteDir('/');
+        self::$adapter->deleteDir('testing');
     }
 
     public static function setUpBeforeClass(): void
