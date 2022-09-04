@@ -283,6 +283,22 @@ class FlysystemTestSuite extends TestCase
      * @test
      * @throws Exception
      */
+    public function it_read_stream()
+    {
+        $this->givenItHasFile(self::$adapter, '/testing/test.txt');
+
+        self::assertEquals(
+            self::TEST_FILE_CONTENTS,
+            stream_get_contents(self::$adapter->readStream('/testing/test.txt')['stream'])
+        );
+
+        self::$adapter->delete('/testing/test.txt');
+    }
+
+    /**
+     * @test
+     * @throws Exception
+     */
     public function it_delete()
     {
         self::assertTrue(self::$adapter->write('/testing/test.txt', self::TEST_FILE_CONTENTS, new Config()));
@@ -296,7 +312,6 @@ class FlysystemTestSuite extends TestCase
      */
     public function it_delete_dir()
     {
-
         self::assertTrue(self::$adapter->createDir('testing_for_deletion',  new Config()));
         self::assertTrue(self::$adapter->deleteDir('testing_for_deletion'));
     }

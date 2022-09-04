@@ -62,9 +62,11 @@ class BunnyCDNAdapter extends AbstractAdapter
 
         try {
             $this->client->upload($path, $contents);
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
 
         return true;
     }
@@ -94,9 +96,11 @@ class BunnyCDNAdapter extends AbstractAdapter
         try {
             $this->copy($path, $newpath);
             $this->delete($path);
+            // @codeCoverageIgnoreStart
         } catch (BunnyCDNException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
         return true;
     }
 
@@ -112,9 +116,11 @@ class BunnyCDNAdapter extends AbstractAdapter
 
         try {
             $this->write($newpath, $this->read($path)['contents'], new Config());
+            // @codeCoverageIgnoreStart
         } catch (BunnyCDNException $exception) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
 
         return true;
     }
@@ -130,7 +136,7 @@ class BunnyCDNAdapter extends AbstractAdapter
         try {
             $this->client->delete($path);
         } catch (Exceptions\BunnyCDNException $e) {
-            if(strpos($e->getMessage(), '404') === False) { # Urgh
+            if(strpos($e->getMessage(), '404') === false) { # Urgh
                 return false;
             }
         }
@@ -149,9 +155,11 @@ class BunnyCDNAdapter extends AbstractAdapter
             $this->client->delete(
                 rtrim($dirname, '/') . '/'
             );
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
         return true;
     }
 
@@ -191,7 +199,6 @@ class BunnyCDNAdapter extends AbstractAdapter
     /**
      * @param string $path
      * @return array|false
-     * @noinspection PhpReturnDocTypeMismatchInspection
      */
     public function read($path)
     {
@@ -201,9 +208,11 @@ class BunnyCDNAdapter extends AbstractAdapter
             return array_merge($this->getMetadata($path) ?: [], [
                 'contents' => $this->client->download($path)
             ]);
+            // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             return false;
         }
+        // @codeCoverageIgnoreEnd
     }
 
     /**
