@@ -350,6 +350,8 @@ class FlysystemTestSuite extends TestCase
             self::$adapter->listContents('/')[0]
         );
 
+        self::assertStringEndsNotWith('/', self::$adapter->listContents('/testing/')[0]['dirname']);
+
         self::assertCount(
             2, self::$adapter->listContents('/', true)
         );
