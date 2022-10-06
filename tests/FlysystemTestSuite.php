@@ -515,4 +515,30 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         // The fact that PHPUnit makes me do this is 🤬
         $this->assertEquals(3, $exception_count);
     }
+
+    /**
+     * Github Issue - 39
+     * https://github.com/PlatformCommunity/flysystem-bunnycdn/issues/39
+     *
+     * Can't request file containing json
+     *
+     * @throws FilesystemException
+     */
+    public function test_regression_issue_39()
+    {
+        $client = new MockClient(self::STORAGE_ZONE, 'api-key');
+
+        $client->add_response(
+            new Response(200, [], json_encode(
+                [
+                    'test' => 123,
+                ]
+            ))
+        );
+
+        $adapter = new Filesystem(new BunnyCDNAdapter($client));
+        $response = $adapter->read('/test.json');
+
+        $this->assertIsString($response);
+    }
 }

@@ -100,7 +100,13 @@ class BunnyCDNClient
     public function download(string $path): string
     {
         try {
-            return $this->request($path.'?download');
+            $content = $this->request($path.'?download');
+
+            if (\is_array($content)) {
+                return \json_encode($content);
+            }
+
+            return $content;
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
