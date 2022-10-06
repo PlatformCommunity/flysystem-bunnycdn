@@ -58,7 +58,12 @@ class BunnyCDNClient
 
         $contents = $response->getBody()->getContents();
 
-        return json_decode($contents, true) ?? $contents;
+//        return json_decode($contents, true) ?? $contents;
+
+        // TODO This is gross, but best method given I don't want to change method signature.
+        return str_ends_with($path, '?download')
+            ? $contents
+            : (json_decode($contents, true) ?? $contents);
     }
 
     /**
