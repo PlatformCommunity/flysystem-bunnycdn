@@ -8,6 +8,7 @@
          processIsolation="false"
          stopOnFailure="false"
          verbose="true"
+         bootstrap="vendor/autoload.php"
 >
     <testsuites>
         <testsuite name="tests">
