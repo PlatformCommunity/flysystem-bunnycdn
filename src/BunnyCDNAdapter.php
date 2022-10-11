@@ -147,12 +147,12 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     protected function normalizeObject(array $bunny_file_array): StorageAttributes
     {
-        $bunny_file_array['Path'] = str_replace($this->prependPrefix(''), '', $bunny_file_array['Path']);
+        $bunny_file_array['Path'] = $this->replaceFirst($this->prependPrefix(''), '', $bunny_file_array['Path']);
 
         return match ($bunny_file_array['IsDirectory']) {
             true => new DirectoryAttributes(
                 Util::normalizePath(
-                    str_replace(
+                    $this->replaceFirst(
                         $bunny_file_array['StorageZoneName'].'/',
                         '/',
                         $bunny_file_array['Path'].$bunny_file_array['ObjectName']
@@ -161,7 +161,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             ),
             false => new FileAttributes(
                 Util::normalizePath(
-                    str_replace(
+                    $this->replaceFirst(
                         $bunny_file_array['StorageZoneName'].'/',
                         '/',
                         $bunny_file_array['Path'].$bunny_file_array['ObjectName']
@@ -524,5 +524,16 @@ class BunnyCDNAdapter implements FilesystemAdapter
         }
 
         return $this->prefixPath.'/'.$path;
+    }
+    
+    private function replaceFirst($search, $replace, $subject)
+    {
+        $position = strpos($subject, $search);
+
+        if ($position !== false) {
+            return substr_replace($subject, $replace, $position, strlen($search));
+        }
+
+        return $subject;
     }
 }
