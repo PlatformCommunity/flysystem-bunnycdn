@@ -525,7 +525,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
 
         return $this->prefixPath.'/'.$path;
     }
-    
+
     private function replaceFirst($search, $replace, $subject)
     {
         $position = strpos($subject, $search);
