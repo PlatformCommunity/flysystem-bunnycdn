@@ -73,7 +73,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         }
 
         if (isset($_SERVER['STORAGEZONE'], $_SERVER['APIKEY'])) {
-            static::$bunnyCDNClient = new BunnyCDNClient($_SERVER['STORAGEZONE'], $_SERVER['APIKEY'], \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion\BunnyCDNRegion::NEW_YORK);
+            static::$bunnyCDNClient = new BunnyCDNClient($_SERVER['STORAGEZONE'], $_SERVER['APIKEY']);
 
             return static::$bunnyCDNClient;
         }
