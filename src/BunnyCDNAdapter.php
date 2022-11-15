@@ -42,8 +42,8 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator
     private BunnyCDNClient $client;
 
     /**
-     * @param BunnyCDNClient $client
-     * @param string $pullzone_url
+     * @param  BunnyCDNClient  $client
+     * @param  string  $pullzone_url
      */
     public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
     {
@@ -458,8 +458,8 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator
     }
 
     /**
-     * @param string $path
-     * @param Config $config
+     * @param  string  $path
+     * @param  Config  $config
      * @return string
      */
     public function publicUrl(string $path, Config $config): string

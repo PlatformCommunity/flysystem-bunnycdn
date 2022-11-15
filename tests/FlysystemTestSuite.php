@@ -396,7 +396,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      */
     public function overwriting_a_file(): void
     {
-        $this->runScenario(function() {
+        $this->runScenario(function () {
             $this->givenWeHaveAnExistingFile('path.txt', 'contents', ['visibility' => Visibility::PUBLIC]);
             $adapter = $this->adapter();
 
