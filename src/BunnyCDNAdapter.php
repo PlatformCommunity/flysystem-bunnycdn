@@ -3,6 +3,8 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
 use Exception;
+use League\Flysystem\CalculateChecksumFromStream;
+use League\Flysystem\ChecksumProvider;
 use League\Flysystem\Config;
 use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\DirectoryListing;
@@ -27,8 +29,10 @@ use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use RuntimeException;
 use TypeError;
 
-class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator
+class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumProvider
 {
+    use CalculateChecksumFromStream;
+
     /**
      * Pull Zone URL
      *
@@ -485,5 +489,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator
         }
 
         return $subject;
+    }
+
+    public function checksum(string $path, Config $config): string
+    {
+        return $this->calculateChecksumFromStream($path, $config);
     }
 }
