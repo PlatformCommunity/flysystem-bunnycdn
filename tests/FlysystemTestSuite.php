@@ -125,6 +125,13 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         return new BunnyCDNAdapter(static::bunnyCDNClient(), 'https://example.org.local/assets/');
     }
 
+    public function test_construct_throws_error(): void
+    {
+        self::expectException(\RuntimeException::class);
+        self::expectExceptionMessage('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
+        new BunnyCDNAdapter(static::bunnyCDNClient(), 'https://example.org.local/assets/', 'thisisauselessarg');
+    }
+
     /**
      * @test
      */
@@ -312,6 +319,14 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         $url = $this->adapter()->publicUrl('/path.txt', new Config());
 
         self::assertEquals('https://example.org.local/assets/path.txt', $url);
+    }
+
+    public function test_without_pullzone_url_error_thrown_accessing_url(): void
+    {
+        self::expectException(\RuntimeException::class);
+        self::expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        $myAdapter = new BunnyCDNAdapter(static::bunnyCDNClient());
+        $myAdapter->publicUrl('/path.txt', new Config());
     }
 
     /**
@@ -567,5 +582,11 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         $response = $adapter->read('/test.json');
 
         $this->assertIsString($response);
+    }
+
+    public function test_replace_first()
+    {
+        self::assertSame('SX', $this->callMethod($this->adapter(), 'replaceFirst', ['X', 'S', 'XX']));
+        self::assertSame('ORIGINAL', $this->callMethod($this->adapter(), 'replaceFirst', ['X', 'S', 'ORIGINAL']));
     }
 }
