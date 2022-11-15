@@ -10,6 +10,7 @@ use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
+use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
 use League\Flysystem\StorageAttributes;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
@@ -59,7 +60,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     public function prefixAdapter(): FilesystemAdapter
     {
         if (! static::$prefixAdapter instanceof FilesystemAdapter) {
-            static::$prefixAdapter = static::createFilesystemAdapter(static::$prefixPath);
+            static::$prefixAdapter = new PathPrefixedAdapter(static::createFilesystemAdapter(), static::$prefixPath);
         }
 
         return static::$prefixAdapter;
@@ -72,7 +73,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         }
 
         if (isset($_SERVER['STORAGEZONE'], $_SERVER['APIKEY'])) {
-            static::$bunnyCDNClient = new BunnyCDNClient($_SERVER['STORAGEZONE'], $_SERVER['APIKEY']);
+            static::$bunnyCDNClient = new BunnyCDNClient($_SERVER['STORAGEZONE'], $_SERVER['APIKEY'], \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion\BunnyCDNRegion::NEW_YORK);
 
             return static::$bunnyCDNClient;
         }
@@ -119,9 +120,9 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         return static::$bunnyCDNClient;
     }
 
-    public static function createFilesystemAdapter(string $prefixPath = ''): FilesystemAdapter
+    public static function createFilesystemAdapter(): FilesystemAdapter
     {
-        return new BunnyCDNAdapter(static::bunnyCDNClient(), '', $prefixPath);
+        return new BunnyCDNAdapter(static::bunnyCDNClient(), 'https://example.org.local/assets/');
     }
 
     /**
@@ -246,12 +247,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
                 new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
             );
 
-            $this->assertSame(
-                'source.file.svg',
-                $prefixPathAdapter->mimeType('source.file.svg')->path()
-            );
-
-            $contents = \iterator_to_array($prefixPathAdapter->listContents('/'));
+            $contents = \iterator_to_array($prefixPathAdapter->listContents('/', false));
 
             $this->assertCount(1, $contents);
             $this->assertSame('source.file.svg', $contents[0]['path']);
@@ -304,6 +300,18 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             $object = self::callMethod($adapter, 'getObject', ['this/is/a/long/sub/directory/source.txt']);
             $this->assertSame('this/is/a/long/sub/directory/source.txt', $object->path());
         });
+    }
+
+    /**
+     * We overwrite the test, because the original tries accessing the url
+     *
+     * @test
+     */
+    public function generating_a_public_url(): void
+    {
+        $url = $this->adapter()->publicUrl('/path.txt', new Config());
+
+        self::assertEquals('https://example.org.local/assets/path.txt', $url);
     }
 
     /**
@@ -384,6 +392,25 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     }
 
     /**
+     * @test
+     */
+    public function overwriting_a_file(): void
+    {
+        $this->runScenario(function() {
+            $this->givenWeHaveAnExistingFile('path.txt', 'contents', ['visibility' => Visibility::PUBLIC]);
+            $adapter = $this->adapter();
+
+            $adapter->write('path.txt', 'new contents', new Config(['visibility' => Visibility::PRIVATE]));
+
+            $contents = $adapter->read('path.txt');
+            $this->assertEquals('new contents', $contents);
+            // Removed as Visibility is not supported in BunnyCDN
+            /*$visibility = $adapter->visibility('path.txt')->visibility();
+            $this->assertEquals(Visibility::PRIVATE, $visibility);*/
+        });
+    }
+
+    /**
      * Fix issue where `fopen` complains when opening downloaded image file#20
      * https://github.com/PlatformCommunity/flysystem-bunnycdn/pull/20
      *
@@ -451,7 +478,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         );
 
         $adapter = new Filesystem(new BunnyCDNAdapter($client));
-        $response = $adapter->listContents('/')->toArray();
+        $response = $adapter->listContents('/', false)->toArray();
 
         $this->assertIsArray($response);
         $this->assertCount(2, $response);
