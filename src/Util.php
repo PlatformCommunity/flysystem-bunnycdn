@@ -2,16 +2,14 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
-use League\Flysystem\Exception;
-
 /**
  * Utility Class
- * @package PlatformCommunity\Flysystem\BunnyCDN
  */
 class Util
 {
     /**
      * Splits a path into a file and a directory
+     *
      * @param $path
      * @return array
      */
@@ -24,20 +22,20 @@ class Util
 
         return [
             'file' => $file,
-            'dir' => $directory
+            'dir' => $directory,
         ];
     }
 
     /**
      * @param $path
-     * @param bool $isDirectory
+     * @param  bool  $isDirectory
      * @return false|string|string[]
      */
     public static function normalizePath($path, $isDirectory = false)
     {
         $path = str_replace('\\', '/', $path);
 
-        if ($isDirectory && !self::endsWith($path, '/')) {
+        if ($isDirectory && ! self::endsWith($path, '/')) {
             $path .= '/';
         }
 
@@ -56,6 +54,7 @@ class Util
 
     /**
      * @codeCoverageIgnore
+     *
      * @param $haystack
      * @param $needle
      * @return bool

@@ -2,9 +2,9 @@ name: build
 
 on:
   push:
-    branches: [ master, v1, v2, v3 ]
+    branches: [ master, v2, v3 ]
   pull_request:
-    branches: [ master, v1, v2, v3 ]
+    branches: [ master, v2, v3 ]
 
 jobs:
   build:
@@ -36,6 +36,9 @@ jobs:
 
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress --no-interaction
+
+    - name: Run linter
+      run: ./vendor/bin/pint -v --test
 
     - name: Run tests
       run: vendor/bin/phpunit -c ./phpunit.xml

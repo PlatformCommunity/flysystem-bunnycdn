@@ -10,9 +10,11 @@ use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 class BunnyCDNClient
 {
-    public $storage_zone_name;
-    private $api_key;
-    private $region;
+    public string $storage_zone_name;
+
+    private string $api_key;
+
+    private string $region;
 
     public $client;
 
@@ -27,22 +29,15 @@ class BunnyCDNClient
 
     private static function get_base_url($region): string
     {
-        switch ($region) {
-            case BunnyCDNRegion::NEW_YORK:
-                return 'https://ny.storage.bunnycdn.com/';
-            case BunnyCDNRegion::LOS_ANGELAS:
-                return 'https://la.storage.bunnycdn.com/';
-            case BunnyCDNRegion::SINGAPORE:
-                return 'https://sg.storage.bunnycdn.com/';
-            case BunnyCDNRegion::SYDNEY:
-                return 'https://syd.storage.bunnycdn.com/';
-            case BunnyCDNRegion::UNITED_KINGDOM:
-                return 'https://uk.storage.bunnycdn.com/';
-            case BunnyCDNRegion::STOCKHOLM:
-                return 'https://se.storage.bunnycdn.com/';
-            default:
-                return 'https://storage.bunnycdn.com/';
-        }
+        return match ($region) {
+            BunnyCDNRegion::NEW_YORK => 'https://ny.storage.bunnycdn.com/',
+            BunnyCDNRegion::LOS_ANGELAS => 'https://la.storage.bunnycdn.com/',
+            BunnyCDNRegion::SINGAPORE => 'https://sg.storage.bunnycdn.com/',
+            BunnyCDNRegion::SYDNEY => 'https://syd.storage.bunnycdn.com/',
+            BunnyCDNRegion::UNITED_KINGDOM => 'https://uk.storage.bunnycdn.com/',
+            BunnyCDNRegion::STOCKHOLM => 'https://se.storage.bunnycdn.com/',
+            default => 'https://storage.bunnycdn.com/'
+        };
     }
 
     /**
@@ -52,11 +47,11 @@ class BunnyCDNClient
     {
         $response = $this->client->request(
             $method,
-            self::get_base_url($this->region) . Util::normalizePath('/' . $this->storage_zone_name . '/').$path,
+            self::get_base_url($this->region).Util::normalizePath('/'.$this->storage_zone_name.'/').$path,
             array_merge_recursive([
                 'headers' => [
                     'Accept' => '*/*',
-                    'AccessKey' => $this->api_key, # Honestly... Why do I have to specify this twice... @BunnyCDN
+                    'AccessKey' => $this->api_key, // Honestly... Why do I have to specify this twice... @BunnyCDN
                 ],
             ], $options)
         );
@@ -67,8 +62,9 @@ class BunnyCDNClient
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return array
+     *
      * @throws NotFoundException|BunnyCDNException
      */
     public function list(string $path): array
@@ -76,62 +72,14 @@ class BunnyCDNClient
         try {
             $listing = $this->request(Util::normalizePath($path).'/');
 
-            # Throw an exception if we don't get back an array
-            if(!is_array($listing)) { throw new NotFoundException('File is not a directory'); }
+            // Throw an exception if we don't get back an array
+            if (! is_array($listing)) {
+                throw new NotFoundException('File is not a directory');
+            }
 
-            return array_map(function($bunny_cdn_item) {
+            return array_map(function ($bunny_cdn_item) {
                 return $bunny_cdn_item;
             }, $listing);
-        } catch (GuzzleException $e) {
-            if($e->getCode() === 404) {
-                throw new NotFoundException($e->getMessage());
-            } else {
-                throw new BunnyCDNException($e->getMessage());
-            }
-        }
-    }
-
-    /**
-     * @param string $path
-     * @return mixed
-     * @throws BunnyCDNException
-     * @throws NotFoundException
-     */
-    public function download(string $path): string
-    {
-        try {
-            return $this->request($path . '?download');
-        // @codeCoverageIgnoreStart
-        } catch (GuzzleException $e) {
-            if($e->getCode() === 404) {
-                throw new NotFoundException($e->getMessage());
-            } else {
-                throw new BunnyCDNException($e->getMessage());
-            }
-        }
-        // @codeCoverageIgnoreStart
-    }
-
-    /**
-     * @param string $path
-     * @return resource|null
-     * @throws BunnyCDNException
-     * @throws NotFoundException
-     */
-    public function stream(string $path)
-    {
-        try {
-            return $this->client->request(
-                'GET',
-                self::get_base_url($this->region) . Util::normalizePath('/' . $this->storage_zone_name . '/').$path,
-                array_merge_recursive([
-                    'stream' => true,
-                    'headers' => [
-                        'Accept' => '*/*',
-                        'AccessKey' => $this->api_key, # Honestly... Why do I have to specify this twice... @BunnyCDN
-                    ]
-                ])
-            )->getBody()->detach();
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             if($e->getCode() === 404) {
@@ -144,9 +92,69 @@ class BunnyCDNClient
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
+     * @return mixed
+     *
+     * @throws BunnyCDNException
+     * @throws NotFoundException
+     */
+    public function download(string $path): string
+    {
+        try {
+            $content = $this->request($path.'?download');
+
+            if (\is_array($content)) {
+                return \json_encode($content);
+            }
+
+            return $content;
+            // @codeCoverageIgnoreStart
+        } catch (GuzzleException $e) {
+            if($e->getCode() === 404) {
+                throw new NotFoundException($e->getMessage());
+            } else {
+                throw new BunnyCDNException($e->getMessage());
+            }
+        }
+        // @codeCoverageIgnoreEnd
+    }
+
+    /**
+     * @param  string  $path
+     * @return resource|null
+     *
+     * @throws BunnyCDNException
+     * @throws NotFoundException
+     */
+    public function stream(string $path)
+    {
+        try {
+            return $this->client->request(
+                'GET',
+                self::get_base_url($this->region).Util::normalizePath('/'.$this->storage_zone_name.'/').$path,
+                array_merge_recursive([
+                    'stream' => true,
+                    'headers' => [
+                        'Accept' => '*/*',
+                        'AccessKey' => $this->api_key, // Honestly... Why do I have to specify this twice... @BunnyCDN
+                    ],
+                ])
+            )->getBody()->detach();
+            // @codeCoverageIgnoreStart
+        } catch (GuzzleException $e) {
+            throw match ($e->getCode()) {
+                404 => new NotFoundException($e->getMessage()),
+                default => new BunnyCDNException($e->getMessage())
+            };
+        }
+        // @codeCoverageIgnoreEnd
+    }
+
+    /**
+     * @param  string  $path
      * @param $contents
      * @return mixed
+     *
      * @throws BunnyCDNException
      */
     public function upload(string $path, $contents)
@@ -156,9 +164,9 @@ class BunnyCDNClient
                 'headers' => [
                     'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
                 ],
-                'body' => $contents
+                'body' => $contents,
             ]);
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw new BunnyCDNException($e->getMessage());
         }
@@ -166,8 +174,9 @@ class BunnyCDNClient
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return mixed
+     *
      * @throws BunnyCDNException
      */
     public function make_directory(string $path)
@@ -175,10 +184,10 @@ class BunnyCDNClient
         try {
             return $this->request(Util::normalizePath($path).'/', 'PUT', [
                 'headers' => [
-                    'Content-Length' => 0
+                    'Content-Length' => 0,
                 ],
             ]);
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             if($e->getCode() === 400) {
                 throw new BunnyCDNException('Directory already exists');
@@ -190,8 +199,9 @@ class BunnyCDNClient
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return mixed
+     *
      * @throws NotFoundException
      * @throws DirectoryNotEmptyException|BunnyCDNException
      */
@@ -199,7 +209,7 @@ class BunnyCDNClient
     {
         try {
             return $this->request($path, 'DELETE');
-        // @codeCoverageIgnoreStart
+            // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             if($e->getCode() === 404) {
                 throw new NotFoundException($e->getMessage());
