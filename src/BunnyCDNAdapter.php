@@ -149,31 +149,32 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         $bunny_file_array['Path'] = $this->replaceFirst($this->prependPrefix(''), '', $bunny_file_array['Path']);
 
-        return match ($bunny_file_array['IsDirectory']) {
-            true => new DirectoryAttributes(
-                Util::normalizePath(
-                    $this->replaceFirst(
-                        $bunny_file_array['StorageZoneName'].'/',
-                        '/',
-                        $bunny_file_array['Path'].$bunny_file_array['ObjectName']
+        switch ($bunny_file_array['IsDirectory']) {
+            case true:
+                return new DirectoryAttributes(
+                    Util::normalizePath(
+                        $this->replaceFirst(
+                            $bunny_file_array['StorageZoneName'] . '/',
+                            '/',
+                            $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
+                        )
                     )
-                )
-            );
-        } else {
-            return new FileAttributes(
-                Util::normalizePath(
-                    $this->replaceFirst(
-                        $bunny_file_array['StorageZoneName'].'/',
-                        '/',
-                        $bunny_file_array['Path'].$bunny_file_array['ObjectName']
-                    )
-                ),
-                $bunny_file_array['Length'],
-                Visibility::PUBLIC,
-                self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
-                $bunny_file_array['ContentType'] ?: $this->detectMimeType($bunny_file_array['Path'].$bunny_file_array['ObjectName']),
-                $this->extractExtraMetadata($bunny_file_array)
-            );
+                );
+            default:
+                return new FileAttributes(
+                    Util::normalizePath(
+                        $this->replaceFirst(
+                            $bunny_file_array['StorageZoneName'] . '/',
+                            '/',
+                            $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
+                        )
+                    ),
+                    $bunny_file_array['Length'],
+                    Visibility::PUBLIC,
+                    self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
+                    $bunny_file_array['ContentType'] ?: $this->detectMimeType($bunny_file_array['Path'] . $bunny_file_array['ObjectName']),
+                    $this->extractExtraMetadata($bunny_file_array)
+                );
         }
     }
 
@@ -218,7 +219,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             }
 
             return $mimeType;
-        } catch (Exception) {
+        } catch (Exception $ex) {
             return '';
         }
     }
@@ -287,10 +288,14 @@ class BunnyCDNAdapter implements FilesystemAdapter
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             // Lol apparently this is "idempotent" but there's an exception... Sure whatever..
-            match ($e->getMessage()) {
-                'Directory already exists' => '',
-                default => throw UnableToCreateDirectory::atLocation($path, $e->getMessage())
-            };
+            switch ($e->getMessage()) {
+                case 'Directory already exists':
+                    '';
+                    break;
+                default:
+                    throw UnableToCreateDirectory::atLocation($path, $e->getMessage());
+                    break;
+            }
         }
         // @codeCoverageIgnoreEnd
     }
@@ -357,7 +362,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $object;
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError) {
+        } catch (TypeError $ex) {
             throw new UnableToRetrieveMetadata('Cannot retrieve mimeType of folder');
         }
     }
@@ -401,7 +406,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError) {
+        } catch (TypeError $ex) {
             throw new UnableToRetrieveMetadata('Last Modified only accepts files as parameters, not directories');
         }
     }
@@ -418,7 +423,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError) {
+        } catch (TypeError $ex) {
             throw new UnableToRetrieveMetadata('Cannot retrieve size of folder');
         }
     }

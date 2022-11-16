@@ -29,15 +29,22 @@ class BunnyCDNClient
 
     private static function get_base_url($region): string
     {
-        return match ($region) {
-            BunnyCDNRegion::NEW_YORK => 'https://ny.storage.bunnycdn.com/',
-            BunnyCDNRegion::LOS_ANGELAS => 'https://la.storage.bunnycdn.com/',
-            BunnyCDNRegion::SINGAPORE => 'https://sg.storage.bunnycdn.com/',
-            BunnyCDNRegion::SYDNEY => 'https://syd.storage.bunnycdn.com/',
-            BunnyCDNRegion::UNITED_KINGDOM => 'https://uk.storage.bunnycdn.com/',
-            BunnyCDNRegion::STOCKHOLM => 'https://se.storage.bunnycdn.com/',
-            default => 'https://storage.bunnycdn.com/'
-        };
+        switch ($region) {
+            case BunnyCDNRegion::NEW_YORK:
+                return 'https://ny.storage.bunnycdn.com/';
+            case BunnyCDNRegion::LOS_ANGELAS:
+                return 'https://la.storage.bunnycdn.com/';
+            case BunnyCDNRegion::SINGAPORE:
+                return 'https://sg.storage.bunnycdn.com/';
+            case BunnyCDNRegion::SYDNEY:
+                return 'https://syd.storage.bunnycdn.com/';
+            case BunnyCDNRegion::UNITED_KINGDOM:
+                return 'https://uk.storage.bunnycdn.com/';
+            case BunnyCDNRegion::STOCKHOLM:
+                return 'https://se.storage.bunnycdn.com/';
+            default:
+                return 'https://storage.bunnycdn.com/';
+        }
     }
 
     /**
@@ -142,10 +149,12 @@ class BunnyCDNClient
             )->getBody()->detach();
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
-            throw match ($e->getCode()) {
-                404 => new NotFoundException($e->getMessage()),
-                default => new BunnyCDNException($e->getMessage())
-            };
+            switch ($e->getCode()) {
+                case 404:
+                    throw new NotFoundException($e->getMessage());
+                default:
+                    throw new BunnyCDNException($e->getMessage());
+            }
         }
         // @codeCoverageIgnoreEnd
     }
