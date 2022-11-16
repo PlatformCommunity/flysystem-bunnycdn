@@ -20,7 +20,7 @@ use Throwable;
 
 class FlysystemTestSuite extends FilesystemAdapterTestCase
 {
-    const STORAGE_ZONE = 'testing_storage_zone';
+    public const STORAGE_ZONE = 'testing_storage_zone';
 
     /**
      * @var FilesystemAdapter|null

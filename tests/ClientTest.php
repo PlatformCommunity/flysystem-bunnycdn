@@ -4,14 +4,13 @@ namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
-use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 class ClientTest extends TestCase
 {
-    const STORAGE_ZONE = 'example_storage_zone';
+    public const STORAGE_ZONE = 'example_storage_zone';
 
     public $client;
 

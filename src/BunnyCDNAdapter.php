@@ -25,7 +25,6 @@ use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use RuntimeException;
 use TypeError;
 
-
 class BunnyCDNAdapter implements FilesystemAdapter
 {
     /**
@@ -525,7 +524,7 @@ class BunnyCDNAdapter implements FilesystemAdapter
             return $path;
         }
 
-        if (\str_starts_with($path, $this->prefixPath.'/')) {
+        if (substr($path, 0, strlen($this->prefixPath.'/')) === $this->prefixPath.'/') {
             return $path;
         }
 
@@ -534,6 +533,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
 
     private function replaceFirst($search, $replace, $subject)
     {
+        if (empty($search)) {
+            return $subject;
+        }
         $position = strpos($subject, $search);
 
         if ($position !== false) {

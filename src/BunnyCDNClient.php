@@ -89,7 +89,7 @@ class BunnyCDNClient
             }, $listing);
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
-            if($e->getCode() === 404) {
+            if ($e->getCode() === 404) {
                 throw new NotFoundException($e->getMessage());
             } else {
                 throw new BunnyCDNException($e->getMessage());
@@ -117,7 +117,7 @@ class BunnyCDNClient
             return $content;
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
-            if($e->getCode() === 404) {
+            if ($e->getCode() === 404) {
                 throw new NotFoundException($e->getMessage());
             } else {
                 throw new BunnyCDNException($e->getMessage());
@@ -198,7 +198,7 @@ class BunnyCDNClient
             ]);
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
-            if($e->getCode() === 400) {
+            if ($e->getCode() === 400) {
                 throw new BunnyCDNException('Directory already exists');
             } else {
                 throw new BunnyCDNException($e->getMessage());
@@ -220,9 +220,9 @@ class BunnyCDNClient
             return $this->request($path, 'DELETE');
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
-            if($e->getCode() === 404) {
+            if ($e->getCode() === 404) {
                 throw new NotFoundException($e->getMessage());
-            } elseif($e->getCode() === 400) {
+            } elseif ($e->getCode() === 400) {
                 throw new DirectoryNotEmptyException($e->getMessage());
             } else {
                 throw new BunnyCDNException($e->getMessage());
