@@ -8,8 +8,10 @@ use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\UnableToRetrieveMetadata;
+use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use Throwable;
 
 class FlysystemTestSuite extends FilesystemAdapterTestCase
@@ -17,12 +19,13 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     /**
      * Storage Zone
      */
-    const STORAGE_ZONE = 'testing_storage_zone';
+    const STORAGE_ZONE = '123123123123123123124';
 
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         return new MockClient(self::STORAGE_ZONE, '123');
-//        return new BunnyCDNClient(self::STORAGE_ZONE, 'api-key');
+
+        return new BunnyCDNClient(self::STORAGE_ZONE, '45a46656-2510-44ce-b678a4e3cec2-0dce-4ca2', BunnyCDNRegion::UNITED_KINGDOM);
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
@@ -35,7 +38,12 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      */
     public function setting_visibility(): void
     {
-        $this->markTestSkipped('No visibility supported');
+        $this->markTestSkipped('No visibility support is provided for BunnyCDN');
+    }
+
+    public function generating_a_temporary_url(): void
+    {
+        $this->markTestSkipped('No temporary URL support is provided for BunnyCDN');
     }
 
     /**
@@ -56,6 +64,24 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         self::expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         $myAdapter = new BunnyCDNAdapter(static::bunnyCDNClient());
         $myAdapter->publicUrl('/path.txt', new Config());
+    }
+
+    /**
+     * @test
+     */
+    public function overwriting_a_file(): void
+    {
+        $this->runScenario(function () {
+            $this->givenWeHaveAnExistingFile('path.txt', 'contents', ['visibility' => Visibility::PUBLIC]);
+            $adapter = $this->adapter();
+
+            $adapter->write('path.txt', 'new contents', new Config(['visibility' => Visibility::PRIVATE]));
+
+            $contents = $adapter->read('path.txt');
+            $this->assertEquals('new contents', $contents);
+            // $visibility = $adapter->visibility('path.txt')->visibility();
+            // $this->assertEquals(Visibility::PRIVATE, $visibility); // Commented out of this test
+        });
     }
 
     /**
@@ -80,56 +106,6 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             $this->assertIsResource($stream);
             $this->assertEquals($image, stream_get_contents($stream));
         });
-    }
-
-    /**
-     * Github Issue - 21
-     * https://github.com/PlatformCommunity/flysystem-bunnycdn/issues/21
-     *
-     * Issue present where the date format can come back in either one of the following formats:
-     * -    2022-04-10T17:43:49.297
-     * -    2022-04-10T17:43:49
-     *
-     * Pretty sure I'm just going to create a static method called "parse_bunny_date" within the client to handle this.
-     *
-     * @throws FilesystemException
-     */
-    public function test_regression_issue_21()
-    {
-//
-//
-//        $mock->append(
-//            new Response(200, [], json_encode(
-//                [
-//                    /**
-//                     * First with the milliseconds
-//                     */
-//                    array_merge(
-//                        $client::example_file('/example_image.png', self::STORAGE_ZONE),
-//                        [
-//                            'LastChanged' => date('Y-m-d\TH:i:s.v'),
-//                            'DateCreated' => date('Y-m-d\TH:i:s.v'),
-//                        ]
-//                    ),
-//                    /**
-//                     * Then without
-//                     */
-//                    array_merge(
-//                        $client::example_file('/example_image.png', self::STORAGE_ZONE),
-//                        [
-//                            'LastChanged' => date('Y-m-d\TH:i:s'),
-//                            'DateCreated' => date('Y-m-d\TH:i:s'),
-//                        ]
-//                    ),
-//                ]
-//            ))
-//        );
-//
-//        $adapter = new Filesystem(new BunnyCDNAdapter($client));
-//        $response = $adapter->listContents('/', false)->toArray();
-//
-//        $this->assertIsArray($response);
-//        $this->assertCount(2, $response);
     }
 
     /**

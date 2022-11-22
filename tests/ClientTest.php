@@ -3,10 +3,10 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use League\Flysystem\FilesystemException;
-use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use function PHPUnit\Framework\assertEmpty;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
@@ -20,7 +20,7 @@ class ClientTest extends TestCase
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         return new MockClient(self::STORAGE_ZONE, '123');
-//        return new BunnyCDNClient(self::STORAGE_ZONE, 'api-key');
+//        return new BunnyCDNClient(self::STORAGE_ZONE, '45a46656-2510-44ce-b678a4e3cec2-0dce-4ca2', BunnyCDNRegion::UNITED_KINGDOM);
     }
 
     protected function setUp(): void

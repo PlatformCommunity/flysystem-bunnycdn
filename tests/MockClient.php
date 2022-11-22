@@ -8,8 +8,6 @@ use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
-use League\Flysystem\UnableToCheckExistence;
-use League\Flysystem\UnableToDeleteDirectory;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
@@ -105,7 +103,7 @@ class MockClient extends BunnyCDNClient
     }
 
     /**
-     * @param string $path
+     * @param  string  $path
      * @return array
      *
      * @throws FilesystemException
@@ -124,6 +122,8 @@ class MockClient extends BunnyCDNClient
                 'HttpCode' => 200,
                 'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
             ];
+        } catch (NotFoundException $e) {
+            throw new NotFoundException('404');
         } catch (\Exception $e) {
             return [
                 'HttpCode' => 404,
