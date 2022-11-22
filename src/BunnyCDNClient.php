@@ -58,7 +58,7 @@ class BunnyCDNClient
 
         $contents = $response->getBody()->getContents();
 
-        return json_decode($contents, true) ?? $contents;
+        return json_decode($response->getBody()->getContents()) ?? $response->getBody()->getContents();
     }
 
     /**

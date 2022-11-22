@@ -5,16 +5,12 @@ namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 use GuzzleHttp\Psr7\Response;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
-use League\Flysystem\FileAttributes;
 use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
-use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
-use League\Flysystem\StorageAttributes;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
-use Mockery;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use Throwable;
@@ -78,44 +74,9 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
             return static::$bunnyCDNClient;
         }
 
-        $filesystem = new Filesystem(new InMemoryFilesystemAdapter());
-
-        $mock_client = Mockery::mock(new BunnyCDNClient(self::STORAGE_ZONE, 'api-key'));
-
-        $mock_client->shouldReceive('list')->andReturnUsing(function ($path) use ($filesystem) {
-            return $filesystem->listContents($path)->map(function (StorageAttributes $file) {
-                return ! $file instanceof FileAttributes
-                    ? MockClient::example_folder($file->path(), self::STORAGE_ZONE, [])
-                    : MockClient::example_file($file->path(), self::STORAGE_ZONE, [
-                        'Length' => $file->fileSize(),
-                    ]);
-            })->toArray();
-        });
-
-        $mock_client->shouldReceive('download')->andReturnUsing(function ($path) use ($filesystem) {
-            return $filesystem->read($path);
-        });
-
-        $mock_client->shouldReceive('stream')->andReturnUsing(function ($path) use ($filesystem) {
-            return $filesystem->readStream($path);
-        });
-
-        $mock_client->shouldReceive('upload')->andReturnUsing(function ($path, $contents) use ($filesystem) {
-            $filesystem->write($path, $contents);
-
-            return'{status: 200}';
-        });
-
-        $mock_client->shouldReceive('make_directory')->andReturnUsing(function ($path) use ($filesystem) {
-            $filesystem->createDirectory($path);
-        });
-
-        $mock_client->shouldReceive('delete')->andReturnUsing(function ($path) use ($filesystem) {
-            $filesystem->deleteDirectory($path);
-            $filesystem->delete($path);
-        });
-
         static::$bunnyCDNClient = $mock_client;
+
+        static::$bunnyCDNClient = new BunnyCDNClient('123123123123123123124', '45a46656-2510-44ce-b678a4e3cec2-0dce-4ca2');
 
         return static::$bunnyCDNClient;
     }
@@ -245,6 +206,8 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      */
     public function prefix_path_not_in_meta_pr_36(): void
     {
+        $this->dontRetryOnException();
+
         $this->runScenario(function () {
             $prefixPathAdapter = $this->prefixAdapter();
 
@@ -568,20 +531,17 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      */
     public function test_regression_issue_39()
     {
-        $client = new MockClient(self::STORAGE_ZONE, 'api-key');
+        $this->dontRetryOnException();
 
-        $client->add_response(
-            new Response(200, [], json_encode(
-                [
-                    'test' => 123,
-                ]
-            ))
-        );
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
 
-        $adapter = new Filesystem(new BunnyCDNAdapter($client));
-        $response = $adapter->read('/test.json');
+            $this->adapter()->write('test.json', json_encode(['test' => 123]), new Config([]));
 
-        $this->assertIsString($response);
+            $response = $adapter->read('/test.json');
+
+            $this->assertIsString($response);
+        });
     }
 
     public function test_replace_first()
