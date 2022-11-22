@@ -18,5 +18,9 @@ class BunnyCDNRegion
 
     public const UNITED_KINGDOM = 'uk';
 
+    public const BRAZIL = 'br';
+
+    public const JOHANNESBURG = 'jh';
+
     public const DEFAULT = self::FALKENSTEIN;
 }
