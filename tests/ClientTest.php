@@ -35,7 +35,7 @@ class ClientTest extends TestCase
             try {
                 $this->client->delete($item['IsDirectory'] ? $item['ObjectName'].'/' : $item['ObjectName']);
             } catch (\Exception $exception) {
-            } // Try our best effort at removing everything from a production adapter
+            } // Try our best effort at removing everything from the filesystem
         }
 
         assertEmpty(
