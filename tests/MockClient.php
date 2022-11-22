@@ -8,7 +8,12 @@ use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
+use League\Flysystem\UnableToCheckExistence;
+use League\Flysystem\UnableToDeleteDirectory;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class MockClient extends BunnyCDNClient
@@ -45,65 +50,85 @@ class MockClient extends BunnyCDNClient
     /**
      * @param  string  $path
      * @return string
+     *
+     * @throws FilesystemException
      */
     public function download(string $path): string
     {
-        try {
-            return $this->filesystem->read($path);
-        } catch (FilesystemException $exception) {
-        }
+        return $this->filesystem->read($path);
     }
 
     /**
      * @param  string  $path
      * @return resource
+     *
+     * @throws FilesystemException
      */
     public function stream(string $path)
     {
-        try {
-            return $this->filesystem->readStream($path);
-        } catch (FilesystemException $exception) {
-        }
+        return $this->filesystem->readStream($path);
     }
 
     /**
      * @param  string  $path
      * @param $contents
-     * @return mixed
+     * @return array
      */
-    public function upload(string $path, $contents): mixed
+    public function upload(string $path, $contents): array
     {
         try {
             $this->filesystem->write($path, $contents);
 
-            return '{"HttpCode":201,"Message":"File uploaded."}';
+            return [
+                'HttpCode' => 201,
+                'Message' => 'File uploaded.',
+            ];
         } catch (FilesystemException $exception) {
         }
     }
 
     /**
      * @param  string  $path
-     * @return mixed
+     * @return array
      */
-    public function make_directory(string $path): mixed
+    public function make_directory(string $path): array
     {
         try {
-            return $this->filesystem->createDirectory($path);
+            $this->filesystem->createDirectory($path);
+
+            return [
+                'HttpCode' => 201,
+                'Message' => 'Directory created.',
+            ];
         } catch (FilesystemException $exception) {
         }
     }
 
     /**
-     * @param  string  $path
-     * @return mixed
+     * @param string $path
+     * @return array
+     *
+     * @throws FilesystemException
+     * @throws BunnyCDNException
+     * @throws DirectoryNotEmptyException
+     * @throws NotFoundException
      */
-    public function delete(string $path): mixed
+    public function delete(string $path): array
     {
         try {
-            $this->filesystem->deleteDirectory($path);
+            $this->filesystem->has($path) ?
+                $this->filesystem->deleteDirectory($path) || $this->filesystem->delete($path) :
+                throw new NotFoundException();
 
-            return $this->filesystem->delete($path);
-        } catch (FilesystemException $exception) {
+            return [
+                'HttpCode' => 200,
+                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+            ];
+        } catch (\Exception $e) {
+            return [
+                'HttpCode' => 404,
+                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+            ];
         }
     }
 

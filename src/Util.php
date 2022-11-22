@@ -78,4 +78,15 @@ class Util
 
         return substr($haystack, -$length) === $needle;
     }
+
+    public static function replaceFirst(string $search, string $replace, string $subject): string
+    {
+        $position = strpos($subject, $search);
+
+        if ($position !== false) {
+            return (string) substr_replace($subject, $replace, $position, strlen($search));
+        }
+
+        return $subject;
+    }
 }

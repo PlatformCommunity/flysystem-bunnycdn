@@ -140,24 +140,20 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     protected function normalizeObject(array $bunny_file_array): StorageAttributes
     {
+        $normalised_path = Util::normalizePath(
+            Util::replaceFirst(
+                $bunny_file_array['StorageZoneName'].'/',
+                '/',
+                $bunny_file_array['Path'].$bunny_file_array['ObjectName']
+            )
+        );
+
         return match ($bunny_file_array['IsDirectory']) {
             true => new DirectoryAttributes(
-                Util::normalizePath(
-                    $this->replaceFirst(
-                        $bunny_file_array['StorageZoneName'].'/',
-                        '/',
-                        $bunny_file_array['Path'].$bunny_file_array['ObjectName']
-                    )
-                )
+                $normalised_path
             ),
             false => new FileAttributes(
-                Util::normalizePath(
-                    $this->replaceFirst(
-                        $bunny_file_array['StorageZoneName'].'/',
-                        '/',
-                        $bunny_file_array['Path'].$bunny_file_array['ObjectName']
-                    )
-                ),
+                $normalised_path,
                 $bunny_file_array['Length'],
                 Visibility::PUBLIC,
                 self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
@@ -202,7 +198,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
             $mimeType = $detector->detectMimeTypeFromPath($path);
 
             if (! $mimeType) {
-                return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+                try {
+                    return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+                } catch (\TypeError $exception) {
+                    return '';
+                }
             }
 
             return $mimeType;
@@ -449,6 +449,16 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     }
 
     /**
+     * @param  string  $path
+     * @param  Config  $config
+     * @return string
+     */
+    public function checksum(string $path, Config $config): string
+    {
+        return $this->calculateChecksumFromStream($path, $config);
+    }
+
+    /**
      * @deprecated use publicUrl instead
      *
      * @param  string  $path
@@ -478,21 +488,5 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     private static function parse_bunny_timestamp(string $timestamp): int
     {
         return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
-    }
-
-    private function replaceFirst(string $search, string $replace, string $subject): string
-    {
-        $position = strpos($subject, $search);
-
-        if ($position !== false) {
-            return (string) substr_replace($subject, $replace, $position, strlen($search));
-        }
-
-        return $subject;
-    }
-
-    public function checksum(string $path, Config $config): string
-    {
-        return $this->calculateChecksumFromStream($path, $config);
     }
 }
