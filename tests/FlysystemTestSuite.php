@@ -23,9 +23,14 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
     private static function bunnyCDNClient(): BunnyCDNClient
     {
-        return new MockClient(self::STORAGE_ZONE, '123');
+        global $storage_zone;
+        global $api_key;
 
-        // return new BunnyCDNClient(self::STORAGE_ZONE, 'private-api-key', BunnyCDNRegion::UNITED_KINGDOM);
+        if($storage_zone !== null && $api_key !== null) {
+            return new BunnyCDNClient($storage_zone, $api_key);
+        } else {
+            return new MockClient(self::STORAGE_ZONE, '123');
+        }
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
