@@ -20,7 +20,7 @@ class ClientTest extends TestCase
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         return new MockClient(self::STORAGE_ZONE, '123');
-//        return new BunnyCDNClient(self::STORAGE_ZONE', 'api-key');
+//        return new BunnyCDNClient(self::STORAGE_ZONE, 'api-key');
     }
 
     protected function setUp(): void

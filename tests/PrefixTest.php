@@ -29,7 +29,7 @@ class PrefixTest extends FilesystemAdapterTestCase
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         return new MockClient(self::STORAGE_ZONE, 'api-key');
-//        return new BunnyCDNClient(self::STORAGE_ZONE', 'api-key');
+//        return new BunnyCDNClient(self::STORAGE_ZONE, 'api-key');
     }
 
     private static function bunnyCDNAdapter(): BunnyCDNAdapter

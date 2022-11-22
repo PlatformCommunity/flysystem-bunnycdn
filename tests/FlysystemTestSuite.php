@@ -22,7 +22,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         return new MockClient(self::STORAGE_ZONE, '123');
-//        return new BunnyCDNClient(self::STORAGE_ZONE', 'api-key');
+//        return new BunnyCDNClient(self::STORAGE_ZONE, 'api-key');
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
