@@ -91,6 +91,12 @@ BunnyCDNRegion::SINGAPORE = 'sg';
 
 # Oceania
 BunnyCDNRegion::SYDNEY = 'syd';
+
+# Africa
+BunnyCDNRegion::JOHANNESBURG = 'JH';
+
+# South America
+BunnyCDNRegion::BRAZIL = 'BR';
 ```
 
 ## Contributing
