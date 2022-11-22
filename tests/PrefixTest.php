@@ -19,7 +19,7 @@ class PrefixTest extends FilesystemAdapterTestCase
     /**
      * Storage Zone
      */
-    const STORAGE_ZONE = '123123123123123123124';
+    const STORAGE_ZONE = 'test_storage_zone';
 
     /**
      * Path Prefix
@@ -29,7 +29,7 @@ class PrefixTest extends FilesystemAdapterTestCase
     private static function bunnyCDNClient(): BunnyCDNClient
     {
         return new MockClient(self::STORAGE_ZONE, 'api-key');
-//        return new BunnyCDNClient(self::STORAGE_ZONE, '45a46656-2510-44ce-b678a4e3cec2-0dce-4ca2', BunnyCDNRegion::UNITED_KINGDOM);
+        // return new BunnyCDNClient(self::STORAGE_ZONE, 'private-api-key', BunnyCDNRegion::UNITED_KINGDOM);
     }
 
     private static function bunnyCDNAdapter(): BunnyCDNAdapter
