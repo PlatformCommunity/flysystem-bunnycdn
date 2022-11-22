@@ -198,11 +198,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
             $mimeType = $detector->detectMimeTypeFromPath($path);
 
             if (! $mimeType) {
-                try {
-                    return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
-                } catch (\TypeError $exception) {
-                    return '';
-                }
+                return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
             }
 
             return $mimeType;
