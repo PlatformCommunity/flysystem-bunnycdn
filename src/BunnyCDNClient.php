@@ -36,6 +36,8 @@ class BunnyCDNClient
             BunnyCDNRegion::SYDNEY => 'https://syd.storage.bunnycdn.com/',
             BunnyCDNRegion::UNITED_KINGDOM => 'https://uk.storage.bunnycdn.com/',
             BunnyCDNRegion::STOCKHOLM => 'https://se.storage.bunnycdn.com/',
+            BunnyCDNRegion::BRAZIL => 'https://br.storage.bunnycdn.com/',
+            BunnyCDNRegion::JOHANNESBURG => 'https://jh.storage.bunnycdn.com/',
             default => 'https://storage.bunnycdn.com/'
         };
     }
