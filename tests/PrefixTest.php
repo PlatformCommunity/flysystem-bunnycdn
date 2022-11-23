@@ -12,7 +12,6 @@ use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
-use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class PrefixTest extends FilesystemAdapterTestCase
@@ -32,7 +31,7 @@ class PrefixTest extends FilesystemAdapterTestCase
         global $storage_zone;
         global $api_key;
 
-        if($storage_zone !== null && $api_key !== null) {
+        if ($storage_zone !== null && $api_key !== null) {
             return new BunnyCDNClient($storage_zone, $api_key);
         } else {
             return new MockClient(self::STORAGE_ZONE, '123');
@@ -55,7 +54,7 @@ class PrefixTest extends FilesystemAdapterTestCase
     public function tearDown(): void
     {
         try {
-            (new Filesystem(self::bunnyCDNAdapter()))->deleteDirectory('/' . self::PREFIX_PATH);
+            (new Filesystem(self::bunnyCDNAdapter()))->deleteDirectory('/'.self::PREFIX_PATH);
         } catch (FilesystemException $e) {
         }
     }
