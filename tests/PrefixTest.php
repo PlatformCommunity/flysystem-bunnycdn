@@ -5,6 +5,7 @@ namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\ChecksumProvider;
 use League\Flysystem\Config;
+use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
@@ -49,6 +50,14 @@ class PrefixTest extends FilesystemAdapterTestCase
             self::bunnyCDNAdapter(),
             self::PREFIX_PATH
         );
+    }
+
+    public function tearDown(): void
+    {
+        try {
+            (new Filesystem(self::bunnyCDNAdapter()))->deleteDirectory('/' . self::PREFIX_PATH);
+        } catch (FilesystemException $e) {
+        }
     }
 
     /**
