@@ -3,33 +3,136 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use Faker\Factory;
-use GuzzleHttp\Client;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
+use League\Flysystem\FileAttributes;
+use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemException;
+use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
+use League\Flysystem\StorageAttributes;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class MockClient extends BunnyCDNClient
 {
-    public MockHandler $mock;
+    /**
+     * @var Filesystem
+     */
+    public Filesystem $filesystem;
 
     public function __construct(string $storage_zone_name, string $api_key, string $region = '')
     {
         parent::__construct($storage_zone_name, $api_key, $region);
-
-        $this->mock = new MockHandler([]);
-        $handlerStack = HandlerStack::create($this->mock);
-
-        $this->client = new Client(['handler' => $handlerStack]);
+        $this->filesystem = new Filesystem(new InMemoryFilesystemAdapter());
     }
 
-    public function add_response(Response $response)
+    /**
+     * @param  string  $path
+     * @return array
+     */
+    public function list(string $path): array
     {
-        return $this->mock->append($response);
+        try {
+            return $this->filesystem->listContents($path)->map(function (StorageAttributes $file) {
+                return ! $file instanceof FileAttributes
+                    ? self::example_folder($file->path(), $this->storage_zone_name, [])
+                    : self::example_file($file->path(), $this->storage_zone_name, [
+                        'Length' => $file->fileSize(),
+                    ]);
+            })->toArray();
+        } catch (FilesystemException $exception) {
+        }
     }
 
-    public static function example_file($path = '/directory/test.png', $storage_zone = 'storage_zone', $override = []): array
+    /**
+     * @param  string  $path
+     * @return string
+     *
+     * @throws FilesystemException
+     */
+    public function download(string $path): string
+    {
+        return $this->filesystem->read($path);
+    }
+
+    /**
+     * @param  string  $path
+     * @return resource
+     *
+     * @throws FilesystemException
+     */
+    public function stream(string $path)
+    {
+        return $this->filesystem->readStream($path);
+    }
+
+    /**
+     * @param  string  $path
+     * @param $contents
+     * @return array
+     */
+    public function upload(string $path, $contents): array
+    {
+        try {
+            $this->filesystem->write($path, $contents);
+
+            return [
+                'HttpCode' => 201,
+                'Message' => 'File uploaded.',
+            ];
+        } catch (FilesystemException $exception) {
+        }
+    }
+
+    /**
+     * @param  string  $path
+     * @return array
+     */
+    public function make_directory(string $path): array
+    {
+        try {
+            $this->filesystem->createDirectory($path);
+
+            return [
+                'HttpCode' => 201,
+                'Message' => 'Directory created.',
+            ];
+        } catch (FilesystemException $exception) {
+        }
+    }
+
+    /**
+     * @param  string  $path
+     * @return array
+     *
+     * @throws FilesystemException
+     * @throws BunnyCDNException
+     * @throws DirectoryNotEmptyException
+     * @throws NotFoundException
+     */
+    public function delete(string $path): array
+    {
+        try {
+            $this->filesystem->has($path) ?
+                $this->filesystem->deleteDirectory($path) || $this->filesystem->delete($path) :
+                throw new NotFoundException();
+
+            return [
+                'HttpCode' => 200,
+                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+            ];
+        } catch (NotFoundException $e) {
+            throw new NotFoundException('404');
+        } catch (\Exception $e) {
+            return [
+                'HttpCode' => 404,
+                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+            ];
+        }
+    }
+
+    private static function example_file($path = '/directory/test.png', $storage_zone = 'storage_zone', $override = []): array
     {
         ['file' => $file, 'dir' => $dir] = Util::splitPathIntoDirectoryAndFile($path);
         $dir = Util::normalizePath($dir);
@@ -54,7 +157,7 @@ class MockClient extends BunnyCDNClient
         ], $override);
     }
 
-    public static function example_folder($path = '/directory/', $storage_zone = 'storage_zone', $override = []): array
+    private static function example_folder($path = '/directory/', $storage_zone = 'storage_zone', $override = []): array
     {
         ['file' => $file, 'dir' => $dir] = Util::splitPathIntoDirectoryAndFile($path);
         $dir = Util::normalizePath($dir);
