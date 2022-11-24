@@ -47,10 +47,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
     {
         $this->client = $client;
         $this->pullzone_url = $pullzone_url;
-
-        if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
-            throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
-        }
     }
 
     /**
@@ -145,23 +141,11 @@ class BunnyCDNAdapter implements FilesystemAdapter
         switch ($bunny_file_array['IsDirectory']) {
             case true:
                 return new DirectoryAttributes(
-                    Util::normalizePath(
-                        $this->replaceFirst(
-                            $bunny_file_array['StorageZoneName'] . '/',
-                            '/',
-                            $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
-                        )
-                    )
+                    $normalised_path
                 );
             default:
                 return new FileAttributes(
-                    Util::normalizePath(
-                        $this->replaceFirst(
-                            $bunny_file_array['StorageZoneName'] . '/',
-                            '/',
-                            $bunny_file_array['Path'] . $bunny_file_array['ObjectName']
-                        )
-                    ),
+                    $normalised_path,
                     $bunny_file_array['Length'],
                     Visibility::PUBLIC,
                     self::parse_bunny_timestamp($bunny_file_array['LastChanged']),
@@ -486,36 +470,5 @@ class BunnyCDNAdapter implements FilesystemAdapter
     private static function parse_bunny_timestamp(string $timestamp): int
     {
         return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
-    }
-
-    private function prependPrefix(string $path): string
-    {
-        if ($this->prefixPath === '') {
-            return $path;
-        }
-
-        if ($path === $this->prefixPath) {
-            return $path;
-        }
-
-        if (substr($path, 0, strlen($this->prefixPath.'/')) === $this->prefixPath.'/') {
-            return $path;
-        }
-
-        return $this->prefixPath.'/'.$path;
-    }
-
-    private function replaceFirst($search, $replace, $subject)
-    {
-        if (empty($search)) {
-            return $subject;
-        }
-        $position = strpos($subject, $search);
-
-        if ($position !== false) {
-            return substr_replace($subject, $replace, $position, strlen($search));
-        }
-
-        return $subject;
     }
 }
