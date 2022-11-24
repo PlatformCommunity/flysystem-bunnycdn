@@ -2,14 +2,13 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
-use League\Flysystem\FilesystemException;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
-use function PHPUnit\Framework\assertEmpty;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
+use function PHPUnit\Framework\assertEmpty;
 
 class ClientTest extends TestCase
 {

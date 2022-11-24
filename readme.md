@@ -158,6 +158,10 @@ BunnyCDNRegion::BRAZIL = 'br';
 
 Pull requests welcome. Please feel free to lodge any issues as discussion points.
 
+## Development
+
+Most of the understanding of how the Flysystem Adapter for BunnyCDN works comes from `tests/`. If you want to complete tests against a live BunnyCDN endpoint, copy the `tests/ClientDI_Example.php` to `tests/ClientDI.php` and insert your credentials into there. You can then run the whole suite by running `vendor/bin/phpunit`, or against a specific file by running `vendor/bin/phpunit --bootstrap tests/ClientDI.php tests/ClientTest.php`. 
+
 ## Licence
 
 The Flysystem adapter for Bunny.net is licensed under [MIT](https://github.com/PlatformCommunity/flysystem-bunnycdn/blob/master/LICENSE). 

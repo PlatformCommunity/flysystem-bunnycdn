@@ -9,8 +9,6 @@ use League\Flysystem\FilesystemException;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
-use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
-use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
@@ -112,7 +110,7 @@ class MockClient extends BunnyCDNClient
     public function delete(string $path): array
     {
         try {
-            if(!in_array(Util::normalizePath($path), array_map(function ($attr) use ($path) {
+            if (!in_array(Util::normalizePath($path), array_map(function ($attr) use ($path) {
                 return Util::normalizePath($attr['path'], $attr['type'] === 'dir');
             }, $this->filesystem->listContents('/', true)->toArray()))) {
                 throw new NotFoundException();
@@ -126,9 +124,7 @@ class MockClient extends BunnyCDNClient
             ];
         } catch (NotFoundException $e) {
             throw new NotFoundException('404');
-        }
-        catch (\Exception $e) {
-
+        } catch (\Exception $e) {
             return [
                 'HttpCode' => 404,
                 'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
