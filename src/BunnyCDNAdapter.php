@@ -40,20 +40,17 @@ class BunnyCDNAdapter implements FilesystemAdapter
     private $client;
 
     /**
-     * @var string
-     */
-    private string $prefixPath;
-
-    /**
      * @param  BunnyCDNClient  $client
      * @param  string  $pullzone_url
-     * @param  string  $prefixPath
      */
-    public function __construct(BunnyCDNClient $client, string $pullzone_url = '', string $prefixPath = '')
+    public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
     {
         $this->client = $client;
         $this->pullzone_url = $pullzone_url;
-        $this->prefixPath = rtrim($prefixPath, '/');
+
+        if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
+            throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
+        }
     }
 
     /**
@@ -64,9 +61,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function copy($source, $destination, Config $config): void
     {
-        $source = $this->prependPrefix($source);
-        $destination = $this->prependPrefix($destination);
-
         try {
             $this->write($destination, $this->read($source), new Config());
             // @codeCoverageIgnoreStart
@@ -83,8 +77,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function write($path, $contents, Config $config): void
     {
-        $path = $this->prependPrefix($path);
-
         try {
             $this->client->upload($path, $contents);
             // @codeCoverageIgnoreStart
@@ -100,8 +92,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function read($path): string
     {
-        $path = $this->prependPrefix($path);
-
         try {
             return $this->client->download($path);
             // @codeCoverageIgnoreStart
@@ -116,10 +106,8 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * @param  bool  $deep
      * @return iterable
      */
-    public function listContents(string $path = '', bool $deep = false): iterable
+    public function listContents(string $path, bool $deep): iterable
     {
-        $path = $this->prependPrefix($path);
-
         try {
             $entries = $this->client->list($path);
             // @codeCoverageIgnoreStart
@@ -146,7 +134,13 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     protected function normalizeObject(array $bunny_file_array): StorageAttributes
     {
-        $bunny_file_array['Path'] = $this->replaceFirst($this->prependPrefix(''), '', $bunny_file_array['Path']);
+        $normalised_path = Util::normalizePath(
+            Util::replaceFirst(
+                $bunny_file_array['StorageZoneName'].'/',
+                '/',
+                $bunny_file_array['Path'].$bunny_file_array['ObjectName']
+            )
+        );
 
         switch ($bunny_file_array['IsDirectory']) {
             case true:
@@ -207,8 +201,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function detectMimeType(string $path): string
     {
-        $path = $this->prependPrefix($path);
-
         try {
             $detector = new FinfoMimeTypeDetector();
             $mimeType = $detector->detectMimeTypeFromPath($path);
@@ -231,8 +223,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function writeStream($path, $contents, Config $config): void
     {
-        $path = $this->prependPrefix($path);
-
         $this->write($path, stream_get_contents($contents), $config);
     }
 
@@ -244,8 +234,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function readStream($path)
     {
-        $path = $this->prependPrefix($path);
-
         try {
             return $this->client->stream($path);
             // @codeCoverageIgnoreStart
@@ -261,8 +249,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function deleteDirectory(string $path): void
     {
-        $path = $this->prependPrefix($path);
-
         try {
             $this->client->delete(
                 rtrim($path, '/').'/'
@@ -280,8 +266,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function createDirectory(string $path, Config $config): void
     {
-        $path = $this->prependPrefix($path);
-
         try {
             $this->client->make_directory($path);
             // @codeCoverageIgnoreStart
@@ -305,8 +289,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function setVisibility(string $path, string $visibility): void
     {
-        $path = $this->prependPrefix($path);
-
         throw UnableToSetVisibility::atLocation($path, 'BunnyCDN does not support visibility');
     }
 
@@ -315,8 +297,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function visibility(string $path): FileAttributes
     {
-        $path = $this->prependPrefix($path);
-
         try {
             return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone_url ? 'public' : 'private');
         } catch (UnableToReadFile|TypeError $e) {
@@ -332,8 +312,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function mimeType(string $path): FileAttributes
     {
-        $path = $this->prependPrefix($path);
-
         try {
             $object = $this->getObject($path);
 
@@ -373,11 +351,9 @@ class BunnyCDNAdapter implements FilesystemAdapter
     protected function getObject(string $path = ''): StorageAttributes
     {
         $directory = pathinfo($path, PATHINFO_DIRNAME);
-        $list = (new DirectoryListing($this->listContents($directory)))
+        $list = (new DirectoryListing($this->listContents($directory, false)))
             ->filter(function (StorageAttributes $item) use ($path) {
-                $itemPath = $this->prependPrefix(Util::normalizePath($item->path()));
-
-                return $itemPath === $path;
+                return Util::normalizePath($item->path()) === $path;
             })->toArray();
 
         if (count($list) === 1) {
@@ -399,8 +375,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function lastModified(string $path): FileAttributes
     {
-        $path = $this->prependPrefix($path);
-
         try {
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
@@ -416,8 +390,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function fileSize(string $path): FileAttributes
     {
-        $path = $this->prependPrefix($path);
-
         try {
             return $this->getObject($path);
         } catch (UnableToReadFile $e) {
@@ -433,9 +405,6 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function move(string $source, string $destination, Config $config): void
     {
-        $source = $this->prependPrefix($source);
-        $destination = $this->prependPrefix($destination);
-
         try {
             $this->write($destination, $this->read($source), new Config());
             $this->delete($source);
@@ -450,14 +419,12 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function delete($path): void
     {
-        $path = $this->prependPrefix($path);
-
         try {
             $this->client->delete($path);
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
-            if (! str_contains($e->getMessage(), '404')) { // Urgh
-                throw UnableToDeleteFile::atLocation($path, $e->getMessage());
+            if (strpos($e->getMessage(), '404') !== false) { // Urgh
+//                throw UnableToDeleteFile::atLocation($path, $e->getMessage());
             }
         }
         // @codeCoverageIgnoreEnd
@@ -477,23 +444,20 @@ class BunnyCDNAdapter implements FilesystemAdapter
      */
     public function fileExists(string $path): bool
     {
-        $path = $this->prependPrefix($path);
-
         $list = new DirectoryListing($this->listContents(
-            Util::splitPathIntoDirectoryAndFile($path)['dir']
+            Util::splitPathIntoDirectoryAndFile($path)['dir'],
+            false
         ));
 
         $count = $list->filter(function (StorageAttributes $item) use ($path) {
-            $itemPath = $this->prependPrefix(Util::normalizePath($item->path()));
-
-            return $itemPath === Util::normalizePath($path);
+            return Util::normalizePath($item->path()) === Util::normalizePath($path);
         })->toArray();
 
         return (bool) count($count);
     }
 
     /**
-     * getURL method for Laravel users who want to use BunnyCDN's PullZone to retrieve a public URL
+     * @deprecated use publicUrl instead
      *
      * @param  string  $path
      * @return string
@@ -501,6 +465,16 @@ class BunnyCDNAdapter implements FilesystemAdapter
      * @noinspection PhpUnused
      */
     public function getUrl(string $path): string
+    {
+        return $this->publicUrl($path, new Config());
+    }
+
+    /**
+     * @param  string  $path
+     * @param  Config  $config
+     * @return string
+     */
+    public function publicUrl(string $path, Config $config): string
     {
         if ($this->pullzone_url === '') {
             throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');

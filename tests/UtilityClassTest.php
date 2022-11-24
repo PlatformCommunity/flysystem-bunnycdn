@@ -114,4 +114,17 @@ class UtilityClassTest extends TestCase
             Util::splitPathIntoDirectoryAndFile('/testing-dir/nested/file.txt')
         );
     }
+
+    public function test_replace_first()
+    {
+        $this->assertSame(
+            'SX',
+            Util::replaceFirst('X', 'S', 'XX')
+        );
+
+        $this->assertSame(
+            'ORIGINAL',
+            Util::replaceFirst('X', 'S', 'ORIGINAL')
+        );
+    }
 }
