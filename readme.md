@@ -4,10 +4,6 @@
 [![Build Status - Flysystem v2](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v2?label=Flysystem%20v2&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v3](https://img.shields.io/github/workflow/status/PlatformCommunity/flysystem-bunnycdn/build/v3?label=Flysystem%20v3&logo=github)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) <br />[![Codecov](https://img.shields.io/codecov/c/github/PlatformCommunity/flysystem-bunnycdn)](https://codecov.io/gh/PlatformCommunity/flysystem-bunnycdn) [![Packagist Version](https://img.shields.io/packagist/v/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn) ![Minimum PHP Version: 7.4](https://img.shields.io/badge/php-min%207.4-important) [![Licence: MIT](https://img.shields.io/packagist/l/platformcommunity/flysystem-bunnycdn)](https://github.com/PlatformCommunity/flysystem-bunnycdn/blob/master/LICENSE) [![Downloads](https://img.shields.io/packagist/dm/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn)
 
 
-<a href="https://twitter.com/sifex/status/1548374115815346178">
-<img src="https://github.com/sifex/sla-timer/raw/HEAD/.github/assets/hiring.svg?" height="49" alt="Logo for SLA Timer">
-</a>
-
 ## Installation
 
 To install `flysystem-bunnycdn`, require the package with no version constraint. This should match the `flysystem-bunnycdn` version with your version of FlySystem (v2, v3 etc).
@@ -41,11 +37,6 @@ To have BunnyCDN adapter publish to a public CDN location, you have to a "Pull Z
 
 
 ```php
-use BunnyCDN\Storage\BunnyCDNClient;
-use League\Flysystem\Filesystem;
-use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
-use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
-
 $adapter = new BunnyCDNAdapter(
     new BunnyCDNClient(
         'storage-zone',
@@ -62,9 +53,73 @@ _Note: You can also use your own domain name if it's configured in the pull zone
 Once you add your pull zone, you can use the `->getUrl($path)`, or in Laravel, the `->url($path)` command to get the fully qualified public URL of your BunnyCDN assets.
 
 ## Usage in Laravel 9
+To add BunnyCDN adapter as a custom storage adapter in Laravel 9, install using the `v3` composer installer.
 
-For a guide on how to use `flysystem-bunnycdn` in Laravel 9, follow the guide here:<br />
-https://blog.sinn.io/bunny-net-php-flysystem-v3/#usage-in-laravel-9 
+```bash
+composer require platformcommunity/flysystem-bunnycdn "^3.0"
+```
+
+Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSystem knowledge of the BunnyCDN adapter.
+
+```php
+    /**
+     * Bootstrap any application services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        Storage::extend('bunnycdn', function ($app, $config) {
+            $adapter = new BunnyCDNAdapter(
+                new BunnyCDNClient(
+                    $config['storage_zone'],
+                    $config['api_key'],
+                    $config['region']
+                ),
+                'http://testing.b-cdn.net' # Optional
+            );
+
+            return new FilesystemAdapter(
+                new Filesystem($adapter, $config),
+                $adapter,
+                $config
+            );
+        });
+    }
+```
+
+Finally, add the `bunnycdn` driver into your `config/filesystems.php` configuration file.
+
+```php
+        ... 
+        
+        'bunnycdn' => [
+            'driver' => 'bunnycdn',
+            'storage_zone' => env('BUNNYCDN_STORAGE_ZONE'),
+            'api_key' => env('BUNNYCDN_APY_KEY'),
+            'region' => env('BUNNYCDN_REGION', \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion::DEFAULT)
+        ],
+        
+        ...
+```
+
+Lastly, populate your `BUNNYCDN_STORAGE_ZONE`, `BUNNYCDN_APY_KEY` `BUNNYCDN_REGION` variables in your `.env` file.
+
+```dotenv
+BUNNYCDN_STORAGE_ZONE=testing_storage_zone
+BUNNYCDN_APY_KEY="api-key"
+# BUNNYCDN_REGION=uk
+```
+
+After that, you can use the `bunnycdn` disk in Laravel 9.
+
+```php
+Storage::disk('bunnycdn')->put('index.html', '<html>Hello World</html>');
+
+return response(Storage::disk('bunnycdn')->get('index.html'));
+```
+
+_Note: You may have to run `php artisan config:clear` in order for your configuration to be refreshed if your app is running with a config cache driver / production mode._
 
 ## Regions
 

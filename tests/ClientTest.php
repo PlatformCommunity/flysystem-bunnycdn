@@ -3,6 +3,8 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use League\Flysystem\FilesystemException;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use function PHPUnit\Framework\assertEmpty;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
@@ -20,9 +22,10 @@ class ClientTest extends TestCase
     {
         global $storage_zone;
         global $api_key;
+        global $region;
 
         if ($storage_zone !== null && $api_key !== null) {
-            return new BunnyCDNClient($storage_zone, $api_key);
+            return new BunnyCDNClient($storage_zone, $api_key, $region ?? BunnyCDNRegion::DEFAULT);
         } else {
             return new MockClient(self::STORAGE_ZONE, '123');
         }
@@ -95,7 +98,6 @@ class ClientTest extends TestCase
      * @return void
      *
      * @throws BunnyCDNException
-     * @throws FilesystemException
      * @throws NotFoundException
      */
     public function test_download_file()
@@ -111,7 +113,6 @@ class ClientTest extends TestCase
      * @return void
      *
      * @throws BunnyCDNException
-     * @throws FilesystemException
      * @throws NotFoundException
      */
     public function test_streaming()
@@ -167,7 +168,6 @@ class ClientTest extends TestCase
      *
      * @throws BunnyCDNException
      * @throws DirectoryNotEmptyException
-     * @throws FilesystemException
      * @throws NotFoundException
      */
     public function test_delete_file()
@@ -189,7 +189,6 @@ class ClientTest extends TestCase
      * @throws BunnyCDNException
      * @throws DirectoryNotEmptyException
      * @throws NotFoundException
-     * @throws FilesystemException
      */
     public function test_delete_file_not_found()
     {

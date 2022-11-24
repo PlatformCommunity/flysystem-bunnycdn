@@ -11,6 +11,7 @@ use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use Throwable;
 
 class FlysystemTestSuite extends FilesystemAdapterTestCase
@@ -24,9 +25,10 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     {
         global $storage_zone;
         global $api_key;
+        global $region;
 
         if ($storage_zone !== null && $api_key !== null) {
-            return new BunnyCDNClient($storage_zone, $api_key);
+            return new BunnyCDNClient($storage_zone, $api_key, $region ?? BunnyCDNRegion::DEFAULT);
         } else {
             return new MockClient(self::STORAGE_ZONE, '123');
         }
