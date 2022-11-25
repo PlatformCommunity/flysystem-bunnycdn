@@ -16,10 +16,21 @@ use Throwable;
 
 class FlysystemTestSuite extends FilesystemAdapterTestCase
 {
-    /**
-     * Storage Zone
-     */
-    const STORAGE_ZONE = 'test_storage_zone';
+    public const DEMOURL = 'https://example.org.local';
+
+    protected static bool $isLive = false;
+
+    protected static string $publicUrl = self::DEMOURL;
+
+    public static function setUpBeforeClass(): void
+    {
+        global $public_url;
+        if (isset($public_url)) {
+            static::$publicUrl = $public_url;
+        }
+
+        static::$publicUrl = rtrim(static::$publicUrl, '/');
+    }
 
     private static function bunnyCDNClient(): BunnyCDNClient
     {
@@ -28,15 +39,17 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
         global $region;
 
         if ($storage_zone !== null && $api_key !== null) {
+            static::$isLive = true;
+
             return new BunnyCDNClient($storage_zone, $api_key, $region ?? BunnyCDNRegion::DEFAULT);
-        } else {
-            return new MockClient(self::STORAGE_ZONE, '123');
         }
+
+        return new MockClient('test_storage_zone', '123');
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
     {
-        return new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
+        return new BunnyCDNAdapter(self::bunnyCDNClient(), static::$publicUrl);
     }
 
     /**
@@ -59,15 +72,21 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      */
     public function generating_a_public_url(): void
     {
+        if (self::$isLive && ! \str_starts_with(static::$publicUrl, self::DEMOURL)) {
+            parent::generating_a_public_url();
+
+            return;
+        }
+
         $url = $this->adapter()->publicUrl('/path.txt', new Config());
 
-        self::assertEquals('https://example.org.local/assets/path.txt', $url);
+        self::assertEquals(static::$publicUrl.'/path.txt', $url);
     }
 
     public function test_without_pullzone_url_error_thrown_accessing_url(): void
     {
-        self::expectException(\RuntimeException::class);
-        self::expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         $myAdapter = new BunnyCDNAdapter(static::bunnyCDNClient());
         $myAdapter->publicUrl('/path.txt', new Config());
     }
@@ -144,7 +163,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
      */
     public function test_regression_issue_29()
     {
-        $client = new MockClient(self::STORAGE_ZONE, 'api-key');
+        $client = self::bunnyCDNClient();
         $client->make_directory('/example_folder');
 
         $adapter = new Filesystem(new BunnyCDNAdapter($client));
