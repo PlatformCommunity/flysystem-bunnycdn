@@ -15,9 +15,9 @@ composer require platformcommunity/flysystem-bunnycdn "*"
 ## Usage
 
 ```php
-use BunnyCDN\Storage\BunnyCDNClient;
 use League\Flysystem\Filesystem;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 
 $adapter = new BunnyCDNAdapter(
