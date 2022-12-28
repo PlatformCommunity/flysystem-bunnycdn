@@ -230,6 +230,30 @@ class PrefixTest extends FilesystemAdapterTestCase
             self::assertFalse($prefixPathAdapter->fileExists(
                 'source.file.svg'
             ));
+
+            $prefixPathAdapter->write(
+                'subfolder/subfolder2/source.file.svg',
+                $content,
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            self::assertTrue($regularAdapter->fileExists(
+                self::PREFIX_PATH.'/subfolder/subfolder2/source.file.svg'
+            ));
+
+            $prefixPathAdapter->move(
+                'subfolder',
+                'newsubfolder',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            self::assertFalse($regularAdapter->fileExists(
+                self::PREFIX_PATH.'/subfolder/subfolder2/source.file.svg'
+            ));
+
+            self::assertTrue($prefixPathAdapter->fileExists(
+                'newsubfolder/subfolder2/source.file.svg'
+            ));
         });
     }
 

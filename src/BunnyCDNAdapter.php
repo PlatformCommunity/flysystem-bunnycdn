@@ -68,12 +68,17 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function copy($source, $destination, Config $config): void
     {
         try {
-            $this->write($destination, $this->read($source), new Config());
-            // @codeCoverageIgnoreStart
+            /** @var array<string> $files */
+            $files = iterator_to_array($this->getFiles($source));
+
+            $sourceLength = \strlen($source);
+
+            foreach ($files as $file) {
+                $this->copyFile($file, $destination.\substr($file, $sourceLength), $config);
+            }
         } catch (UnableToReadFile|UnableToWriteFile $exception) {
             throw UnableToCopyFile::fromLocationTo($source, $destination, $exception);
         }
-        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -394,11 +399,48 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function move(string $source, string $destination, Config $config): void
     {
         try {
-            $this->write($destination, $this->read($source), new Config());
-            $this->delete($source);
+            /** @var array<string> $files */
+            $files = iterator_to_array($this->getFiles($source));
+
+            $sourceLength = \strlen($source);
+
+            foreach ($files as $file) {
+                $this->moveFile($file, $destination.\substr($file, $sourceLength), $config);
+            }
         } catch (UnableToReadFile $e) {
             throw new UnableToMoveFile($e->getMessage());
         }
+    }
+
+    private function getFiles(string $source): iterable
+    {
+        $contents = iterator_to_array($this->listContents($source, true));
+
+        if (\count($contents) === 0) {
+            yield $source;
+
+            return;
+        }
+
+        /** @var StorageAttributes $entry */
+        foreach ($contents as $entry) {
+            if ($entry->isFile() === false) {
+                continue;
+            }
+
+            yield $entry->path();
+        }
+    }
+
+    private function moveFile(string $source, string $destination, Config $config): void
+    {
+        $this->copyFile($source, $destination, $config);
+        $this->delete($source);
+    }
+
+    private function copyFile(string $source, string $destination, Config $config): void
+    {
+        $this->write($destination, $this->read($source), $config);
     }
 
     /**
