@@ -2,6 +2,7 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
+use DateTimeInterface;
 use Exception;
 use League\Flysystem\CalculateChecksumFromStream;
 use League\Flysystem\ChecksumProvider;
@@ -40,6 +41,8 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     private string $pullzone_url;
 
+    private string $pullzone_key = '';
+
     /**
      * @var BunnyCDNClient
      */
@@ -57,6 +60,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
             throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
         }
+    }
+
+    public function setPullzoneToken(string $pullzone_key): void
+    {
+        $this->pullzone_key = $pullzone_key;
     }
 
     /**
@@ -479,6 +487,47 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         }
 
         return rtrim($this->pullzone_url, '/').'/'.ltrim($path, '/');
+    }
+
+    /**
+     * Builds a signed url for a BunnyCDN object
+     *
+     * @param string $path the path of the file to fetch
+     * @param DateTimeInterface $expiresAt expiration date of the signed url
+     * @param array $urlParameters optional parameters including: remote_ip, countries, & settings for bunny optimizer
+     * @param string $allowForPath pass an optional path to enable access to related objects that may be in the same folder
+     *
+     * @return string
+     *
+     * @ref https://support.bunny.net/hc/en-us/articles/360016055099-How-to-sign-URLs-for-BunnyCDN-Token-Authentication
+     *
+     */
+    public function temporaryUrl(string $path, DateTimeInterface $expiresAt, array $urlParameters = [], string $allowForPath = ''): string
+    {
+        if ($this->pullzone_url === '') {
+            throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        }
+        if ($this->pullzone_key === '') {
+            throw new RuntimeException('In order to get a signed URL for a BunnyCDN object, you must pass the "pullzone_key" parameter to the BunnyCDNAdapter.');
+        }
+        // bunny requires params in ascending order
+        ksort($urlParameters);
+        $queryParameters = http_build_query($urlParameters);
+        $expiration = $expiresAt->getTimestamp();
+        $basePathToHash = $this->pullzone_key . $path . $expiresAt->getTimestamp() . $queryParameters;
+        $hash = hash('sha256', $basePathToHash, true);
+        // per docs, assemble and strip extra characters out
+        $token = base64_encode($hash);
+        $token = strtr($token, '+/', '-_');
+        $token = str_replace('=', '', $token);
+        // original params can be added after the token, but before expires
+        if(!empty($queryParameters)) {
+            $queryParameters = '&' . $queryParameters;
+        }
+        // assemble the final path and merge it back with the pullzone_url
+        $signedPath =  "?token={$token}{$queryParameters}&expires={$expiration}";
+
+        return rtrim($this->pullzone_url, '/') . $path . $signedPath;
     }
 
     private static function parse_bunny_timestamp(string $timestamp): int
