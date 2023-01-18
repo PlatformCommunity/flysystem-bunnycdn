@@ -78,6 +78,9 @@ Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSys
                 ),
                 'http://testing.b-cdn.net' # Optional
             );
+            
+            // optionally, set a pull_zone token if needed
+            $adapter->setPullzoneToken($config['pullzone_token']);
 
             return new FilesystemAdapter(
                 new Filesystem($adapter, $config),
@@ -97,7 +100,8 @@ Finally, add the `bunnycdn` driver into your `config/filesystems.php` configurat
             'driver' => 'bunnycdn',
             'storage_zone' => env('BUNNYCDN_STORAGE_ZONE'),
             'api_key' => env('BUNNYCDN_APY_KEY'),
-            'region' => env('BUNNYCDN_REGION', \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion::DEFAULT)
+            'region' => env('BUNNYCDN_REGION', \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion::DEFAULT),
+            'pullzone_token' => env('BUNNYCDN_PULLZONE_TOKEN', null),
         ],
         
         ...
@@ -109,6 +113,7 @@ Lastly, populate your `BUNNYCDN_STORAGE_ZONE`, `BUNNYCDN_APY_KEY` `BUNNYCDN_REGI
 BUNNYCDN_STORAGE_ZONE=testing_storage_zone
 BUNNYCDN_APY_KEY="api-key"
 # BUNNYCDN_REGION=uk
+# BUNNYCDN_PULLZONE_TOKEN="pull-zone-token"
 ```
 
 After that, you can use the `bunnycdn` disk in Laravel 9.
