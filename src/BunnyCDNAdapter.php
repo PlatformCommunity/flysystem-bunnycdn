@@ -2,7 +2,6 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
-use DateTimeInterface;
 use Exception;
 use League\Flysystem\CalculateChecksumFromStream;
 use League\Flysystem\ChecksumProvider;
@@ -27,6 +26,7 @@ use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\UrlGeneration\PublicUrlGenerator;
 use League\Flysystem\Visibility;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
+use DateTimeInterface;
 use RuntimeException;
 use TypeError;
 
