@@ -13,6 +13,7 @@ use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyPullZone;
 use Throwable;
 
 class FlysystemTestSuite extends FilesystemAdapterTestCase
@@ -37,7 +38,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
 
     public static function createFilesystemAdapter(): FilesystemAdapter
     {
-        return new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/');
+        return new BunnyCDNAdapter(self::bunnyCDNClient(), new BunnyPullZone('https://example.org.local/'));
     }
 
     /**
@@ -58,7 +59,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     public function test_generating_a_temporary_url(): void
     {
         $adapter = self::createFilesystemAdapter();
-        $adapter->setPullzoneToken('this-is-a-test-token');
+        $adapter->changePullZone(new BunnyPullZone('https://example.org.local/', 'this-is-a-test-token'));
 
         $dateTime = new DateTime('2021-01-01 11:11:00');
         $temporaryUrl = $adapter->temporaryUrl('/assets/path/to/file.png', $dateTime);
@@ -76,7 +77,7 @@ class FlysystemTestSuite extends FilesystemAdapterTestCase
     public function test_generating_temporary_url_supports_image_optimization(): void
     {
         $adapter = self::createFilesystemAdapter();
-        $adapter->setPullzoneToken('this-is-a-test-token');
+        $adapter->changePullZone(new BunnyPullZone('https://example.org.local/', 'this-is-a-test-token'));
 
         $dateTime = new DateTime('2021-01-01 11:11:00');
         $temporaryUrl = $adapter->temporaryUrl('/assets/path/to/file.png', $dateTime, [

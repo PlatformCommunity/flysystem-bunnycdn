@@ -12,6 +12,7 @@ use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\BunnyPullZone;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class PrefixTest extends FilesystemAdapterTestCase
@@ -40,7 +41,7 @@ class PrefixTest extends FilesystemAdapterTestCase
 
     private static function bunnyCDNAdapter(): BunnyCDNAdapter
     {
-        return new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
+        return new BunnyCDNAdapter(self::bunnyCDNClient(), new BunnyPullZone('https://example.org.local/'));
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
@@ -85,7 +86,7 @@ class PrefixTest extends FilesystemAdapterTestCase
     {
         $url = $this->adapter()->publicUrl('path.txt', new Config());
 
-        self::assertEquals('https://example.org.local/assets/path_prefix_12345/path.txt', $url);
+        self::assertEquals('https://example.org.local/path_prefix_12345/path.txt', $url);
     }
 
     public function overwriting_a_file(): void
@@ -121,13 +122,6 @@ class PrefixTest extends FilesystemAdapterTestCase
         $adapter->write('path.txt', 'foobar', new Config());
 
         $this->assertSame('3858f62230ac3c915f300c664312c63f', $adapter->checksum(Util::normalizePath(self::PREFIX_PATH.'/path.txt'), new Config()));
-    }
-
-    public function test_construct_throws_error(): void
-    {
-        self::expectException(\RuntimeException::class);
-        self::expectExceptionMessage('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
-        new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/', 'thisisauselessarg');
     }
 
     /**

@@ -35,36 +35,31 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     use CalculateChecksumFromStream;
 
     /**
-     * Pull Zone URL
-     *
-     * @var string
-     */
-    private string $pullzone_url;
-
-    private string $pullzone_key = '';
-
-    /**
      * @var BunnyCDNClient
      */
     private BunnyCDNClient $client;
 
+    private ?BunnyPullZone $pullzone;
+
     /**
-     * @param  BunnyCDNClient  $client
-     * @param  string  $pullzone_url
+     * @param BunnyCDNClient $client
+     * @param BunnyPullZone|null $pullzone
      */
-    public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
+    public function __construct(BunnyCDNClient $client, ?BunnyPullZone $pullzone = null)
     {
         $this->client = $client;
-        $this->pullzone_url = $pullzone_url;
-
-        if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
-            throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
-        }
+        $this->pullzone = $pullzone;
     }
 
-    public function setPullzoneToken(string $pullzone_key): void
+    /**
+     * Changes the pullzone currently in use on the adapter. Primarily used for testing.
+     *
+     * @param BunnyPullZone $pullzone
+     * @return void
+     */
+    public function changePullZone(BunnyPullZone $pullzone): void
     {
-        $this->pullzone_key = $pullzone_key;
+        $this->pullzone = $pullzone;
     }
 
     /**
@@ -294,7 +289,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function visibility(string $path): FileAttributes
     {
         try {
-            return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone_url ? 'public' : 'private');
+            return new FileAttributes($this->getObject($path)->path(), null, $this->pullzone ? 'public' : 'private');
         } catch (UnableToReadFile|TypeError $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
         }
@@ -482,11 +477,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function publicUrl(string $path, Config $config): string
     {
-        if ($this->pullzone_url === '') {
-            throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        if (!$this->pullzone) {
+            throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, a pullzone must passed to the BunnyCDNAdapter.');
         }
 
-        return rtrim($this->pullzone_url, '/').'/'.ltrim($path, '/');
+        return $this->pullzone->publicUrl($path);
     }
 
     /**
@@ -504,30 +499,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function temporaryUrl(string $path, DateTimeInterface $expiresAt, array $urlParameters = [], string $allowForPath = ''): string
     {
-        if ($this->pullzone_url === '') {
-            throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        if (!$this->pullzone) {
+            throw new RuntimeException('In order to get a public URL, a pullzone must passed to the BunnyCDNAdapter.');
         }
-        if ($this->pullzone_key === '') {
-            throw new RuntimeException('In order to get a signed URL for a BunnyCDN object, you must pass the "pullzone_key" parameter to the BunnyCDNAdapter.');
-        }
-        // bunny requires params in ascending order
-        ksort($urlParameters);
-        $queryParameters = http_build_query($urlParameters);
-        $expiration = $expiresAt->getTimestamp();
-        $basePathToHash = $this->pullzone_key . $path . $expiresAt->getTimestamp() . $queryParameters;
-        $hash = hash('sha256', $basePathToHash, true);
-        // per docs, assemble and strip extra characters out
-        $token = base64_encode($hash);
-        $token = strtr($token, '+/', '-_');
-        $token = str_replace('=', '', $token);
-        // original params can be added after the token, but before expires
-        if(!empty($queryParameters)) {
-            $queryParameters = '&' . $queryParameters;
-        }
-        // assemble the final path and merge it back with the pullzone_url
-        $signedPath =  "?token={$token}{$queryParameters}&expires={$expiration}";
-
-        return rtrim($this->pullzone_url, '/') . $path . $signedPath;
+        return $this->pullzone->temporaryUrl($path, $expiresAt, $urlParameters, $allowForPath);
     }
 
     private static function parse_bunny_timestamp(string $timestamp): int
