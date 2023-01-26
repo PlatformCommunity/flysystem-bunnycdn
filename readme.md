@@ -84,9 +84,6 @@ Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSys
                     'optional-parameter-security-token'
                 )
             );
-            
-            // optionally, set a pull_zone token if needed
-            $adapter->setPullzoneToken($config['pullzone_token']);
 
             return new FilesystemAdapter(
                 new Filesystem($adapter, $config),
