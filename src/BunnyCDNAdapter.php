@@ -11,6 +11,7 @@ use League\Flysystem\Config;
 use League\Flysystem\Exception;
 use League\Flysystem\FileNotFoundException;
 use League\Flysystem\UnreadableFileException;
+use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use RuntimeException;
@@ -293,7 +294,11 @@ class BunnyCDNAdapter extends AbstractAdapter
                     $bunny_file_array['Path']
                 )
             ), '/'),
-            'mimetype'  => $bunny_file_array['ContentType'],
+            'mimetype'  => (
+                $bunny_file_array['IsDirectory'] ? 
+                $bunny_file_array['IsDirectory'] : 
+                $this->detectMimeType($bunny_file_array['Path'] . $bunny_file_array['ObjectName'])
+            ),
             'guid' => $bunny_file_array['Guid'],
             'path'      => '/'.Util::normalizePath(
                 str_replace(
@@ -316,6 +321,24 @@ class BunnyCDNAdapter extends AbstractAdapter
         ];
     }
 
+    /**
+     * Detects the mime type from the provided file path
+     *
+     * @param string $path
+     * @return ?string
+     */
+    public function detectMimeType(string $path): ?string
+    {
+        $detector = new FinfoMimeTypeDetector();
+        $mimeType = $detector->detectMimeTypeFromPath($path);
+
+        if (!$mimeType) {
+            return $detector->detectMimeTypeFromBuffer(stream_get_contents($this->readStream($path), 80));
+        }
+
+        return $mimeType;
+    }
+    
     /**
      * Returns a normalised Flysystem Metadata Array
      * * array_values is called because array_filter sometimes doesn't start the array at 1
