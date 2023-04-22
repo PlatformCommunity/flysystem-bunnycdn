@@ -29,6 +29,7 @@
     },
     "autoload": {
         "psr-4": {
+            "PlatformCommunity\\Flysystem\\BunnyCDN\\Tests\\": "tests/",
             "PlatformCommunity\\Flysystem\\BunnyCDN\\": "src/"
         }
     },
