@@ -96,18 +96,18 @@ Finally, add the `bunnycdn` driver into your `config/filesystems.php` configurat
         'bunnycdn' => [
             'driver' => 'bunnycdn',
             'storage_zone' => env('BUNNYCDN_STORAGE_ZONE'),
-            'api_key' => env('BUNNYCDN_APY_KEY'),
+            'api_key' => env('BUNNYCDN_API_KEY'),
             'region' => env('BUNNYCDN_REGION', \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion::DEFAULT)
         ],
         
         ...
 ```
 
-Lastly, populate your `BUNNYCDN_STORAGE_ZONE`, `BUNNYCDN_APY_KEY` `BUNNYCDN_REGION` variables in your `.env` file.
+Lastly, populate your `BUNNYCDN_STORAGE_ZONE`, `BUNNYCDN_API_KEY` `BUNNYCDN_REGION` variables in your `.env` file.
 
 ```dotenv
 BUNNYCDN_STORAGE_ZONE=testing_storage_zone
-BUNNYCDN_APY_KEY="api-key"
+BUNNYCDN_API_KEY="api-key"
 # BUNNYCDN_REGION=uk
 ```
 
