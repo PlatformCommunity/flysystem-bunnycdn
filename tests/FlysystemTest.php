@@ -16,7 +16,7 @@ use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use Throwable;
 
-class FlysystemTestSuite extends FilesystemAdapterTestCase
+class FlysystemTest extends FilesystemAdapterTestCase
 {
     public const DEMOURL = 'https://example.org.local';
 
