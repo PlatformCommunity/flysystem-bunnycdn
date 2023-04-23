@@ -7,6 +7,8 @@ use League\Flysystem\Config;
 use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
+use League\Flysystem\UnableToCopyFile;
+use League\Flysystem\UnableToMoveFile;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
@@ -16,10 +18,21 @@ use Throwable;
 
 class FlysystemTest extends FilesystemAdapterTestCase
 {
-    /**
-     * Storage Zone
-     */
-    const STORAGE_ZONE = 'test_storage_zone';
+    public const DEMOURL = 'https://example.org.local';
+
+    protected static bool $isLive = false;
+
+    protected static string $publicUrl = self::DEMOURL;
+
+    public static function setUpBeforeClass(): void
+    {
+        global $public_url;
+        if (isset($public_url)) {
+            static::$publicUrl = $public_url;
+        }
+
+        static::$publicUrl = rtrim(static::$publicUrl, '/');
+    }
 
     private static function bunnyCDNClient(): BunnyCDNClient
     {
@@ -28,15 +41,17 @@ class FlysystemTest extends FilesystemAdapterTestCase
         global $region;
 
         if ($storage_zone !== null && $api_key !== null) {
+            static::$isLive = true;
+
             return new BunnyCDNClient($storage_zone, $api_key, $region ?? BunnyCDNRegion::DEFAULT);
-        } else {
-            return new MockClient(self::STORAGE_ZONE, '123');
         }
+
+        return new MockClient('test_storage_zone', '123');
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
     {
-        return new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
+        return new BunnyCDNAdapter(self::bunnyCDNClient(), static::$publicUrl);
     }
 
     /**
@@ -53,21 +68,131 @@ class FlysystemTest extends FilesystemAdapterTestCase
     }
 
     /**
+     * @test
+     */
+    public function moving_a_folder(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'test/text.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+            $adapter->write(
+                'test/2/text.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+            $adapter->move('test', 'destination', new Config());
+            $this->assertFalse(
+                $adapter->fileExists('test/text.txt'),
+                'After moving a file should no longer exist in the original location.'
+            );
+            $this->assertFalse(
+                $adapter->fileExists('test/2/text.txt'),
+                'After moving a file should no longer exist in the original location.'
+            );
+            $this->assertTrue(
+                $adapter->fileExists('destination/text.txt'),
+                'After moving, a file should be present at the new location.'
+            );
+            $this->assertTrue(
+                $adapter->fileExists('destination/2/text.txt'),
+                'After moving, a file should be present at the new location.'
+            );
+            $this->assertEquals('contents to be copied', $adapter->read('destination/text.txt'));
+            $this->assertEquals('contents to be copied', $adapter->read('destination/2/text.txt'));
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function moving_a_not_existing_folder(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $this->expectException(UnableToMoveFile::class);
+            $adapter->move('not_existing_file', 'destination', new Config());
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function copying_a_folder(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'test/text.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+            $adapter->write(
+                'test/2/text.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+            $adapter->copy('test', 'destination', new Config());
+            $this->assertTrue(
+                $adapter->fileExists('test/text.txt'),
+                'After copying a file should exist in the original location.'
+            );
+            $this->assertTrue(
+                $adapter->fileExists('test/2/text.txt'),
+                'After copying a file should exist in the original location.'
+            );
+            $this->assertTrue(
+                $adapter->fileExists('destination/text.txt'),
+                'After copying, a file should be present at the new location.'
+            );
+            $this->assertTrue(
+                $adapter->fileExists('destination/2/text.txt'),
+                'After copying, a file should be present at the new location.'
+            );
+            $this->assertEquals('contents to be copied', $adapter->read('destination/text.txt'));
+            $this->assertEquals('contents to be copied', $adapter->read('destination/2/text.txt'));
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function copying_a_not_existing_folder(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $this->expectException(UnableToCopyFile::class);
+            $adapter->copy('not_existing_file', 'destination', new Config());
+        });
+    }
+
+    /**
      * We overwrite the test, because the original tries accessing the url
      *
      * @test
      */
     public function generating_a_public_url(): void
     {
+        if (self::$isLive && ! \str_starts_with(static::$publicUrl, self::DEMOURL)) {
+            parent::generating_a_public_url();
+
+            return;
+        }
+
         $url = $this->adapter()->publicUrl('/path.txt', new Config());
 
-        self::assertEquals('https://example.org.local/assets/path.txt', $url);
+        self::assertEquals(static::$publicUrl.'/path.txt', $url);
     }
 
     public function test_without_pullzone_url_error_thrown_accessing_url(): void
     {
-        self::expectException(\RuntimeException::class);
-        self::expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         $myAdapter = new BunnyCDNAdapter(static::bunnyCDNClient());
         $myAdapter->publicUrl('/path.txt', new Config());
     }
@@ -144,7 +269,7 @@ class FlysystemTest extends FilesystemAdapterTestCase
      */
     public function test_regression_issue_29()
     {
-        $client = new MockClient(self::STORAGE_ZONE, 'api-key');
+        $client = self::bunnyCDNClient();
         $client->make_directory('/example_folder');
 
         $adapter = new Filesystem(new BunnyCDNAdapter($client));

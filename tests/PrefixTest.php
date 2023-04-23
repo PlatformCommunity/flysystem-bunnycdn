@@ -17,14 +17,9 @@ use PlatformCommunity\Flysystem\BunnyCDN\Util;
 class PrefixTest extends FilesystemAdapterTestCase
 {
     /**
-     * Storage Zone
-     */
-    const STORAGE_ZONE = 'test_storage_zone';
-
-    /**
      * Path Prefix
      */
-    const PREFIX_PATH = 'path_prefix_12345';
+    public const PREFIX_PATH = 'path_prefix_12345';
 
     private static function bunnyCDNClient(): BunnyCDNClient
     {
@@ -33,9 +28,9 @@ class PrefixTest extends FilesystemAdapterTestCase
 
         if ($storage_zone !== null && $api_key !== null) {
             return new BunnyCDNClient($storage_zone, $api_key);
-        } else {
-            return new MockClient(self::STORAGE_ZONE, '123');
         }
+
+        return new MockClient('test_storage_zone', '123');
     }
 
     private static function bunnyCDNAdapter(): BunnyCDNAdapter
@@ -125,8 +120,8 @@ class PrefixTest extends FilesystemAdapterTestCase
 
     public function test_construct_throws_error(): void
     {
-        self::expectException(\RuntimeException::class);
-        self::expectExceptionMessage('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
         new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/', 'thisisauselessarg');
     }
 
@@ -234,6 +229,30 @@ class PrefixTest extends FilesystemAdapterTestCase
 
             self::assertFalse($prefixPathAdapter->fileExists(
                 'source.file.svg'
+            ));
+
+            $prefixPathAdapter->write(
+                'subfolder/subfolder2/source.file.svg',
+                $content,
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            self::assertTrue($regularAdapter->fileExists(
+                self::PREFIX_PATH.'/subfolder/subfolder2/source.file.svg'
+            ));
+
+            $prefixPathAdapter->move(
+                'subfolder',
+                'newsubfolder',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            self::assertFalse($regularAdapter->fileExists(
+                self::PREFIX_PATH.'/subfolder/subfolder2/source.file.svg'
+            ));
+
+            self::assertTrue($prefixPathAdapter->fileExists(
+                'newsubfolder/subfolder2/source.file.svg'
             ));
         });
     }

@@ -12,8 +12,6 @@ use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 class ClientTest extends TestCase
 {
-    const STORAGE_ZONE = 'test_storage_zone';
-
     public BunnyCDNClient $client;
 
     private static function bunnyCDNClient(): BunnyCDNClient
@@ -24,9 +22,9 @@ class ClientTest extends TestCase
 
         if ($storage_zone !== null && $api_key !== null) {
             return new BunnyCDNClient($storage_zone, $api_key, $region ?? BunnyCDNRegion::DEFAULT);
-        } else {
-            return new MockClient(self::STORAGE_ZONE, '123');
         }
+
+        return new MockClient('test_storage_zone', '123');
     }
 
     protected function setUp(): void
