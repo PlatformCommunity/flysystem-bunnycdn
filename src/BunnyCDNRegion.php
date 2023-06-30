@@ -10,7 +10,7 @@ class BunnyCDNRegion
 
     public const NEW_YORK = 'ny';
 
-    public const LOS_ANGELAS = 'la';
+    public const LOS_ANGELES = 'la';
 
     public const SINGAPORE = 'sg';
 

@@ -139,7 +139,7 @@ BunnyCDNRegion::UNITED_KINGDOM = 'uk';
 
 # USA
 BunnyCDNRegion::NEW_YORK = 'ny';
-BunnyCDNRegion::LOS_ANGELAS = 'la';
+BunnyCDNRegion::LOS_ANGELES = 'la';
 
 # SEA
 BunnyCDNRegion::SINGAPORE = 'sg';
