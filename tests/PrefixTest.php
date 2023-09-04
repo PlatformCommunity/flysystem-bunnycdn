@@ -99,10 +99,6 @@ class PrefixTest extends FilesystemAdapterTestCase
     }
 
     /**
-     * This seems to be a bug in flysystem's path prefixer, same with temporary URLs
-     * Opened https://github.com/thephpleague/flysystem/pull/1595 to fix it over there. Below is the fix for here.
-     * TODO Remove when merged and update lockfile
-     *
      * @test
      */
     public function get_checksum(): void
@@ -115,7 +111,18 @@ class PrefixTest extends FilesystemAdapterTestCase
 
         $adapter->write('path.txt', 'foobar', new Config());
 
-        $this->assertSame('3858f62230ac3c915f300c664312c63f', $adapter->checksum(Util::normalizePath(self::PREFIX_PATH.'/path.txt'), new Config()));
+        //TODO change to "path.txt" when released and update composer: https://github.com/thephpleague/flysystem/commit/d80b88278a632b8a18f72833de9fa8330b355e91
+        $path = Util::normalizePath(self::PREFIX_PATH.'/path.txt');
+
+        $this->assertSame(
+            '3858f62230ac3c915f300c664312c63f',
+            $adapter->checksum($path, new Config(['checksum_algo' => 'md5']))
+        );
+
+        $this->assertSame(
+            'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
+            $adapter->checksum($path, new Config())
+        );
     }
 
     public function test_construct_throws_error(): void

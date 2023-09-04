@@ -16,7 +16,7 @@ use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use Throwable;
 
-class FlysystemTest extends FilesystemAdapterTestCase
+class FlysystemAdapterTest extends FilesystemAdapterTestCase
 {
     public const DEMOURL = 'https://example.org.local';
 
@@ -213,6 +213,26 @@ class FlysystemTest extends FilesystemAdapterTestCase
             // $visibility = $adapter->visibility('path.txt')->visibility();
             // $this->assertEquals(Visibility::PRIVATE, $visibility); // Commented out of this test
         });
+    }
+
+    /**
+     * @test
+     */
+    public function get_checksum(): void
+    {
+        $adapter = $this->adapter();
+
+        $adapter->write('path.txt', 'foobar', new Config());
+
+        $this->assertSame(
+            '3858f62230ac3c915f300c664312c63f',
+            $adapter->checksum('path.txt', new Config(['checksum_algo' => 'md5']))
+        );
+
+        $this->assertSame(
+            'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
+            $adapter->checksum('path.txt', new Config())
+        );
     }
 
     /**
