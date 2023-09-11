@@ -112,12 +112,12 @@ class PrefixTest extends FilesystemAdapterTestCase
 
         $this->assertSame(
             '3858f62230ac3c915f300c664312c63f',
-            $adapter->checksum('path.txt', new Config(['checksum_algo' => 'md5']))
+            $adapter->checksum('path.txt', new Config())
         );
 
         $this->assertSame(
             'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
-            $adapter->checksum('path.txt', new Config())
+            $adapter->checksum('path.txt', new Config(['checksum_algo' => 'sha256']))
         );
     }
 

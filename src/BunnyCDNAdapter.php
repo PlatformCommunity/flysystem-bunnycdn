@@ -494,7 +494,8 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function checksum(string $path, Config $config): string
     {
-        $algo = $config->get('checksum_algo', 'sha256');
+        // for compatibility reasons, the default checksum algorithm is md5
+        $algo = $config->get('checksum_algo', 'md5');
 
         if ($algo !== 'sha256') {
             return $this->calculateChecksumFromStream($path, $config);
