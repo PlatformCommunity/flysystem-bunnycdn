@@ -12,7 +12,6 @@ use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
-use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class PrefixTest extends FilesystemAdapterTestCase
 {
@@ -111,17 +110,14 @@ class PrefixTest extends FilesystemAdapterTestCase
 
         $adapter->write('path.txt', 'foobar', new Config());
 
-        //TODO change to "path.txt" when released and update composer: https://github.com/thephpleague/flysystem/commit/d80b88278a632b8a18f72833de9fa8330b355e91
-        $path = Util::normalizePath(self::PREFIX_PATH.'/path.txt');
-
         $this->assertSame(
             '3858f62230ac3c915f300c664312c63f',
-            $adapter->checksum($path, new Config(['checksum_algo' => 'md5']))
+            $adapter->checksum('path.txt', new Config(['checksum_algo' => 'md5']))
         );
 
         $this->assertSame(
             'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
-            $adapter->checksum($path, new Config())
+            $adapter->checksum('path.txt', new Config())
         );
     }
 
