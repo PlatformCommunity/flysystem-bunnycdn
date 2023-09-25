@@ -12,7 +12,6 @@ use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
-use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class PrefixTest extends FilesystemAdapterTestCase
 {
@@ -99,10 +98,6 @@ class PrefixTest extends FilesystemAdapterTestCase
     }
 
     /**
-     * This seems to be a bug in flysystem's path prefixer, same with temporary URLs
-     * Opened https://github.com/thephpleague/flysystem/pull/1595 to fix it over there. Below is the fix for here.
-     * TODO Remove when merged and update lockfile
-     *
      * @test
      */
     public function get_checksum(): void
@@ -115,7 +110,15 @@ class PrefixTest extends FilesystemAdapterTestCase
 
         $adapter->write('path.txt', 'foobar', new Config());
 
-        $this->assertSame('3858f62230ac3c915f300c664312c63f', $adapter->checksum(Util::normalizePath(self::PREFIX_PATH.'/path.txt'), new Config()));
+        $this->assertSame(
+            '3858f62230ac3c915f300c664312c63f',
+            $adapter->checksum('path.txt', new Config())
+        );
+
+        $this->assertSame(
+            'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
+            $adapter->checksum('path.txt', new Config(['checksum_algo' => 'sha256']))
+        );
     }
 
     public function test_construct_throws_error(): void

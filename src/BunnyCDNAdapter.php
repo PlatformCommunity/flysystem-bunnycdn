@@ -19,6 +19,7 @@ use League\Flysystem\UnableToCreateDirectory;
 use League\Flysystem\UnableToDeleteDirectory;
 use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToMoveFile;
+use League\Flysystem\UnableToProvideChecksum;
 use League\Flysystem\UnableToReadFile;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\UnableToSetVisibility;
@@ -493,7 +494,26 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function checksum(string $path, Config $config): string
     {
-        return $this->calculateChecksumFromStream($path, $config);
+        // for compatibility reasons, the default checksum algorithm is md5
+        $algo = $config->get('checksum_algo', 'md5');
+
+        if ($algo !== 'sha256') {
+            return $this->calculateChecksumFromStream($path, $config);
+        }
+
+        try {
+            $file = $this->getObject($path);
+        } catch (UnableToReadFile $exception) {
+            throw new UnableToProvideChecksum($exception->reason(), $path, $exception);
+        }
+
+        $metaData = $file->extraMetadata();
+
+        if (empty($metaData['checksum']) || ! is_string($metaData['checksum'])) {
+            throw new UnableToProvideChecksum('Checksum not available.', $path);
+        }
+
+        return \strtolower($metaData['checksum']);
     }
 
     /**

@@ -39,6 +39,7 @@ class MockClient extends BunnyCDNClient
                     ? self::example_folder($file->path(), $this->storage_zone_name, [])
                     : self::example_file($file->path(), $this->storage_zone_name, [
                         'Length' => $file->fileSize(),
+                        'Checksum' => hash('sha256', $this->filesystem->read($file->path())),
                     ]);
             })->toArray();
         } catch (FilesystemException $exception) {

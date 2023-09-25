@@ -2,6 +2,7 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
+use Faker\Factory;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
 use League\Flysystem\Filesystem;
@@ -9,14 +10,16 @@ use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\UnableToCopyFile;
 use League\Flysystem\UnableToMoveFile;
+use League\Flysystem\UnableToProvideChecksum;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
+use PlatformCommunity\Flysystem\BunnyCDN\Util;
 use Throwable;
 
-class FlysystemTest extends FilesystemAdapterTestCase
+class FlysystemAdapterTest extends FilesystemAdapterTestCase
 {
     public const DEMOURL = 'https://example.org.local';
 
@@ -213,6 +216,71 @@ class FlysystemTest extends FilesystemAdapterTestCase
             // $visibility = $adapter->visibility('path.txt')->visibility();
             // $this->assertEquals(Visibility::PRIVATE, $visibility); // Commented out of this test
         });
+    }
+
+    /**
+     * @test
+     */
+    public function get_checksum(): void
+    {
+        $adapter = $this->adapter();
+
+        $adapter->write('path.txt', 'foobar', new Config());
+
+        $this->assertSame(
+            '3858f62230ac3c915f300c664312c63f',
+            $adapter->checksum('path.txt', new Config())
+        );
+
+        $this->assertSame(
+            'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2',
+            $adapter->checksum('path.txt', new Config(['checksum_algo' => 'sha256']))
+        );
+    }
+
+    public function test_checksum_throws_error_with_non_existing_file_on_default_algo(): void
+    {
+        $adapter = $this->adapter();
+
+        $this->expectException(UnableToProvideChecksum::class);
+        $adapter->checksum('path.txt', new Config(['checksum_algo' => 'sha256']));
+    }
+
+    //test_checksum_throws_error_with_empty_checksum_from_client
+    public function test_checksum_throws_error_with_empty_checksum_from_client(): void
+    {
+        $client = $this->createMock(BunnyCDNClient::class);
+        $client->expects(self::exactly(1))->method('list')->willReturnCallback(
+            function () {
+                ['file' => $file, 'dir' => $dir] = Util::splitPathIntoDirectoryAndFile('file.txt');
+                $dir = Util::normalizePath($dir);
+                $faker = Factory::create();
+                $storage_zone = $faker->word;
+
+                return [[
+                    'Guid' => $faker->uuid,
+                    'StorageZoneName' => $storage_zone,
+                    'Path' => Util::normalizePath('/'.$storage_zone.'/'.$dir.'/'),
+                    'ObjectName' => $file,
+                    'Length' => $faker->numberBetween(0, 10240),
+                    'LastChanged' => date('Y-m-d\TH:i:s.v'),
+                    'ServerId' => $faker->numberBetween(0, 10240),
+                    'ArrayNumber' => 0,
+                    'IsDirectory' => false,
+                    'UserId' => 'bf91bc4e-0e60-411a-b475-4416926d20f7',
+                    'ContentType' => '',
+                    'DateCreated' => date('Y-m-d\TH:i:s.v'),
+                    'StorageZoneId' => $faker->numberBetween(0, 102400),
+                    'Checksum' => null,
+                    'ReplicatedZones' => '',
+                ]];
+            }
+        );
+
+        $adapter = new BunnyCDNAdapter($client);
+        $this->expectException(UnableToProvideChecksum::class);
+        $this->expectExceptionMessage('Unable to get checksum for file.txt: Checksum not available.');
+        $adapter->checksum('file.txt', new Config(['checksum_algo' => 'sha256']));
     }
 
     /**
