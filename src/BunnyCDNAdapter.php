@@ -450,6 +450,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function delete($path): void
     {
+        // if path is empty or ends with /, it's a directory.
+        if (empty($path) || str_ends_with($path, '/')) {
+            throw UnableToDeleteFile::atLocation($path, 'Deletion of directories prevented.');
+        }
+
         try {
             $this->client->delete($path);
             // @codeCoverageIgnoreStart

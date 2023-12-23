@@ -13,6 +13,10 @@ use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 
+if (\is_file(__DIR__.'/ClientDI.php')) {
+    require_once __DIR__.'/ClientDI.php';
+}
+
 class PrefixTest extends FilesystemAdapterTestCase
 {
     /**

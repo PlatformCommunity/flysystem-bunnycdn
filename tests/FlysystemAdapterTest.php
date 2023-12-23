@@ -9,6 +9,7 @@ use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\UnableToCopyFile;
+use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToMoveFile;
 use League\Flysystem\UnableToProvideChecksum;
 use League\Flysystem\UnableToRetrieveMetadata;
@@ -18,6 +19,10 @@ use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 use Throwable;
+
+if (\is_file(__DIR__.'/ClientDI.php')) {
+    require_once __DIR__.'/ClientDI.php';
+}
 
 class FlysystemAdapterTest extends FilesystemAdapterTestCase
 {
@@ -68,6 +73,44 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     public function generating_a_temporary_url(): void
     {
         $this->markTestSkipped('No temporary URL support is provided for BunnyCDN');
+    }
+
+    /**
+     * @test
+     */
+    public function delete_on_directory_throws_exception(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $adapter->write(
+                'test/text.txt',
+                'contents',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            $this->expectException(UnableToDeleteFile::class);
+            $adapter->delete('test/');
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function delete_with_empty_path_throws_exception(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $adapter->write(
+                'test/text.txt',
+                'contents',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+
+            $this->expectException(UnableToDeleteFile::class);
+            $adapter->delete('');
+        });
     }
 
     /**

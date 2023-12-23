@@ -10,6 +10,10 @@ use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
+if (\is_file(__DIR__.'/ClientDI.php')) {
+    require_once __DIR__.'/ClientDI.php';
+}
+
 class ClientTest extends TestCase
 {
     public BunnyCDNClient $client;
