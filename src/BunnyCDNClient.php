@@ -29,7 +29,7 @@ class BunnyCDNClient
 
     private static function get_base_url($region): string
     {
-        return match ($region) {
+        return match (strtolower($region)) {
             BunnyCDNRegion::NEW_YORK => 'https://ny.storage.bunnycdn.com/',
             BunnyCDNRegion::LOS_ANGELAS => 'https://la.storage.bunnycdn.com/',
             BunnyCDNRegion::SINGAPORE => 'https://sg.storage.bunnycdn.com/',
