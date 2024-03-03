@@ -264,6 +264,26 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     /**
      * @test
      */
+    public function moving_a_file_to_same_destination(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+            $adapter->write(
+                'source.txt',
+                'contents to be copied',
+                new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
+            );
+            $adapter->move('source.txt', 'source.txt', new Config());
+            $this->assertTrue(
+                $adapter->fileExists('source.txt'),
+                'After moving a file to the same location the file should exist.'
+            );
+        });
+    }
+
+    /**
+     * @test
+     */
     public function get_checksum(): void
     {
         $adapter = $this->adapter();

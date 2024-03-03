@@ -399,6 +399,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function move(string $source, string $destination, Config $config): void
     {
+        if ($source === $destination) {
+            return;
+        }
+
         try {
             /** @var array<string> $files */
             $files = iterator_to_array($this->getFiles($source));
