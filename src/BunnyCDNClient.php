@@ -5,7 +5,6 @@ namespace PlatformCommunity\Flysystem\BunnyCDN;
 use GuzzleHttp\Client as Guzzle;
 use GuzzleHttp\Exception\GuzzleException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
-use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 class BunnyCDNClient
@@ -204,7 +203,7 @@ class BunnyCDNClient
      * @return mixed
      *
      * @throws NotFoundException
-     * @throws DirectoryNotEmptyException|BunnyCDNException
+     * @throws BunnyCDNException
      */
     public function delete(string $path): mixed
     {
@@ -214,7 +213,6 @@ class BunnyCDNClient
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
                 404 => new NotFoundException($e->getMessage()),
-                400 => new DirectoryNotEmptyException($e->getMessage()),
                 default => new BunnyCDNException($e->getMessage())
             };
         }
