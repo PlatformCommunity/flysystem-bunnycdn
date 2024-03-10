@@ -27,6 +27,7 @@ use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\UrlGeneration\PublicUrlGenerator;
 use League\Flysystem\Visibility;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
+use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use RuntimeException;
 use TypeError;
 
@@ -252,6 +253,8 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
                 rtrim($path, '/').'/'
             );
             // @codeCoverageIgnoreStart
+        } catch (NotFoundException) {
+            // nth
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToDeleteDirectory::atLocation($path, $e->getMessage());
         }
@@ -462,10 +465,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         try {
             $this->client->delete($path);
             // @codeCoverageIgnoreStart
+        } catch (NotFoundException) {
+            // nth
         } catch (Exceptions\BunnyCDNException $e) {
-            if (! str_contains($e->getMessage(), '404')) { // Urgh
-                throw UnableToDeleteFile::atLocation($path, $e->getMessage());
-            }
+            throw UnableToDeleteFile::atLocation($path, $e->getMessage());
         }
         // @codeCoverageIgnoreEnd
     }

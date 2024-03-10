@@ -10,7 +10,6 @@ use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use League\Flysystem\StorageAttributes;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
-use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
@@ -109,7 +108,6 @@ class MockClient extends BunnyCDNClient
      *
      * @throws FilesystemException
      * @throws BunnyCDNException
-     * @throws DirectoryNotEmptyException
      * @throws NotFoundException
      */
     public function delete(string $path): array
