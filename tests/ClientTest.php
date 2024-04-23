@@ -7,7 +7,6 @@ use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
-use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\DirectoryNotEmptyException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 
 if (\is_file(__DIR__.'/ClientDI.php')) {
@@ -167,7 +166,6 @@ class ClientTest extends TestCase
      * @return void
      *
      * @throws BunnyCDNException
-     * @throws DirectoryNotEmptyException
      * @throws NotFoundException
      */
     public function test_delete_file()
@@ -187,7 +185,6 @@ class ClientTest extends TestCase
      * @return void
      *
      * @throws BunnyCDNException
-     * @throws DirectoryNotEmptyException
      * @throws NotFoundException
      */
     public function test_delete_file_not_found()
