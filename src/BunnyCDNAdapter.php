@@ -478,7 +478,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function directoryExists(string $path): bool
     {
-        return $this->fileExists($path);
+        return $this->exists(StorageAttributes::TYPE_DIRECTORY, $path);
     }
 
     /**
@@ -487,16 +487,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function fileExists(string $path): bool
     {
-        $list = new DirectoryListing($this->listContents(
-            Util::splitPathIntoDirectoryAndFile($path)['dir'],
-            false
-        ));
-
-        $count = $list->filter(function (StorageAttributes $item) use ($path) {
-            return Util::normalizePath($item->path()) === Util::normalizePath($path);
-        })->toArray();
-
-        return (bool) count($count);
+        return $this->exists(StorageAttributes::TYPE_FILE, $path);
     }
 
     /**
@@ -558,5 +549,19 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     private static function parse_bunny_timestamp(string $timestamp): int
     {
         return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
+    }
+
+    private function exists(string $type, string $path): bool
+    {
+        $list = new DirectoryListing($this->listContents(
+            Util::splitPathIntoDirectoryAndFile($path)['dir'],
+            false
+        ));
+
+        $count = $list->filter(function (StorageAttributes $item) use ($path, $type) {
+            return $item->type() === $type && Util::normalizePath($item->path()) === Util::normalizePath($path);
+        })->toArray();
+
+        return (bool) count($count);
     }
 }

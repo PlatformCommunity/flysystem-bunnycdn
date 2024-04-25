@@ -78,6 +78,36 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     /**
      * @test
      */
+    public function file_exists_on_directory_is_false(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $this->assertFalse($adapter->directoryExists('test'));
+            $adapter->createDirectory('test', new Config());
+            $this->assertTrue($adapter->directoryExists('test'));
+            $this->assertFalse($adapter->fileExists('test'));
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function directory_exists_on_file_is_false(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $this->assertFalse($adapter->fileExists('test.txt'));
+            $adapter->write('test.txt', 'aaa', new Config());
+            $this->assertTrue($adapter->fileExists('test.txt'));
+            $this->assertFalse($adapter->directoryExists('test.txt'));
+        });
+    }
+
+    /**
+     * @test
+     */
     public function delete_on_directory_throws_exception(): void
     {
         $this->runScenario(function () {
