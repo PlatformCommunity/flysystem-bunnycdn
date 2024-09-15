@@ -76,7 +76,7 @@ Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSys
                     $config['api_key'],
                     $config['region']
                 ),
-                'http://testing.b-cdn.net' # Optional
+                $config['pull_zone']
             );
 
             return new FilesystemAdapter(
@@ -96,6 +96,7 @@ Finally, add the `bunnycdn` driver into your `config/filesystems.php` configurat
         'bunnycdn' => [
             'driver' => 'bunnycdn',
             'storage_zone' => env('BUNNYCDN_STORAGE_ZONE'),
+            'pull_zone' => env('BUNNYCDN_PULL_ZONE'),
             'api_key' => env('BUNNYCDN_API_KEY'),
             'region' => env('BUNNYCDN_REGION', \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion::DEFAULT)
         ],
@@ -107,6 +108,7 @@ Lastly, populate your `BUNNYCDN_STORAGE_ZONE`, `BUNNYCDN_API_KEY` `BUNNYCDN_REGI
 
 ```dotenv
 BUNNYCDN_STORAGE_ZONE=testing_storage_zone
+BUNNYCDN_PULL_ZONE=https://testing.b-cdn.net
 BUNNYCDN_API_KEY="api-key"
 # BUNNYCDN_REGION=uk
 ```
