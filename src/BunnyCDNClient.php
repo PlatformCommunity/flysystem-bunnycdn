@@ -4,8 +4,10 @@ namespace PlatformCommunity\Flysystem\BunnyCDN;
 
 use GuzzleHttp\Client as Guzzle;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Psr7\Request;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
+use Psr\Http\Client\ClientExceptionInterface;
 
 class BunnyCDNClient
 {
@@ -41,13 +43,9 @@ class BunnyCDNClient
         };
     }
 
-    /**
-     * @throws GuzzleException
-     */
-    private function request(string $path, string $method = 'GET', array $options = []): mixed
+    public function createRequest(string $path, string $method = 'GET', array $options = []): Request
     {
-        $response = $this->client->request(
-            $method,
+        return new Request($method,
             self::get_base_url($this->region).Util::normalizePath('/'.$this->storage_zone_name.'/').$path,
             array_merge_recursive([
                 'headers' => [
@@ -56,8 +54,16 @@ class BunnyCDNClient
                 ],
             ], $options)
         );
+    }
 
-        $contents = $response->getBody()->getContents();
+    /**
+     * @throws ClientExceptionInterface
+     */
+    private function request(string $path, string $method = 'GET', array $options = []): mixed
+    {
+        $request = $this->createRequest($path, $method, $options);
+
+        $contents = $this->client->sendRequest($request)->getBody()->getContents();
 
         return json_decode($contents, true) ?? $contents;
     }
@@ -128,17 +134,7 @@ class BunnyCDNClient
     public function stream(string $path)
     {
         try {
-            return $this->client->request(
-                'GET',
-                self::get_base_url($this->region).Util::normalizePath('/'.$this->storage_zone_name.'/').$path,
-                array_merge_recursive([
-                    'stream' => true,
-                    'headers' => [
-                        'Accept' => '*/*',
-                        'AccessKey' => $this->api_key, // Honestly... Why do I have to specify this twice... @BunnyCDN
-                    ],
-                ])
-            )->getBody()->detach();
+           return $this->createRequest($path, 'GET', ['stream' => true])->getBody()->detach();
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
@@ -167,9 +163,7 @@ class BunnyCDNClient
             ]);
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
-            throw match ($e->getCode()) {
-                default => new BunnyCDNException($e->getMessage())
-            };
+            throw new BunnyCDNException($e->getMessage());
         }
         // @codeCoverageIgnoreEnd
     }
