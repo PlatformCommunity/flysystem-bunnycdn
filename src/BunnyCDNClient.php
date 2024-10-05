@@ -11,20 +11,13 @@ use Psr\Http\Client\ClientExceptionInterface;
 
 class BunnyCDNClient
 {
-    public string $storage_zone_name;
-
-    private string $api_key;
-
-    private string $region;
-
     public Guzzle $client;
 
-    public function __construct(string $storage_zone_name, string $api_key, string $region = BunnyCDNRegion::FALKENSTEIN)
-    {
-        $this->storage_zone_name = $storage_zone_name;
-        $this->api_key = $api_key;
-        $this->region = $region;
-
+    public function __construct(
+        public string $storage_zone_name,
+        private string $api_key,
+        private string $region = BunnyCDNRegion::FALKENSTEIN
+    ) {
         $this->client = new Guzzle();
     }
 
@@ -43,27 +36,25 @@ class BunnyCDNClient
         };
     }
 
-    public function createRequest(string $path, string $method = 'GET', array $options = []): Request
+    public function createRequest(string $path, string $method = 'GET', array $headers = [], $body = null): Request
     {
-        return new Request($method,
+        return new Request(
+            $method,
             self::get_base_url($this->region).Util::normalizePath('/'.$this->storage_zone_name.'/').$path,
-            array_merge_recursive([
-                'headers' => [
-                    'Accept' => '*/*',
-                    'AccessKey' => $this->api_key, // Honestly... Why do I have to specify this twice... @BunnyCDN
-                ],
-            ], $options)
+            array_merge([
+                'Accept' => '*/*',
+                'AccessKey' => $this->api_key,
+            ], $headers),
+            $body
         );
     }
 
     /**
      * @throws ClientExceptionInterface
      */
-    private function request(string $path, string $method = 'GET', array $options = []): mixed
+    private function request(Request $request, array $options = []): mixed
     {
-        $request = $this->createRequest($path, $method, $options);
-
-        $contents = $this->client->sendRequest($request)->getBody()->getContents();
+        $contents = $this->client->send($request, $options)->getBody()->getContents();
 
         return json_decode($contents, true) ?? $contents;
     }
@@ -77,7 +68,7 @@ class BunnyCDNClient
     public function list(string $path): array
     {
         try {
-            $listing = $this->request(Util::normalizePath($path).'/');
+            $listing = $this->request($this->createRequest(Util::normalizePath($path).'/'));
 
             // Throw an exception if we don't get back an array
             if (! is_array($listing)) {
@@ -107,7 +98,7 @@ class BunnyCDNClient
     public function download(string $path): string
     {
         try {
-            $content = $this->request($path.'?download');
+            $content = $this->request($this->createRequest($path.'?download'));
 
             if (\is_array($content)) {
                 return \json_encode($content);
@@ -134,7 +125,7 @@ class BunnyCDNClient
     public function stream(string $path)
     {
         try {
-           return $this->createRequest($path, 'GET', ['stream' => true])->getBody()->detach();
+            return $this->client->send($this->createRequest($path), ['stream' => true])->getBody()->detach();
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
@@ -143,6 +134,18 @@ class BunnyCDNClient
             };
         }
         // @codeCoverageIgnoreEnd
+    }
+
+    public function getUploadRequest(string $path, $contents): Request
+    {
+        return $this->createRequest(
+            $path,
+            'PUT',
+            [
+                'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+            ],
+            $contents
+        );
     }
 
     /**
@@ -155,12 +158,7 @@ class BunnyCDNClient
     public function upload(string $path, $contents): mixed
     {
         try {
-            return $this->request($path, 'PUT', [
-                'headers' => [
-                    'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
-                ],
-                'body' => $contents,
-            ]);
+            return $this->request($this->getUploadRequest($path, $contents));
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw new BunnyCDNException($e->getMessage());
@@ -177,11 +175,9 @@ class BunnyCDNClient
     public function make_directory(string $path): mixed
     {
         try {
-            return $this->request(Util::normalizePath($path).'/', 'PUT', [
-                'headers' => [
-                    'Content-Length' => 0,
-                ],
-            ]);
+            return $this->request($this->createRequest(Util::normalizePath($path).'/', 'PUT', [
+                'Content-Length' => 0,
+            ]));
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
@@ -202,7 +198,7 @@ class BunnyCDNClient
     public function delete(string $path): mixed
     {
         try {
-            return $this->request($path, 'DELETE');
+            return $this->request($this->createRequest($path, 'DELETE'));
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
