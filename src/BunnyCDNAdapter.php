@@ -222,9 +222,9 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
                 }
             };
 
-            $pool = new Pool($this->client->client, $requests(), [
+            $pool = new Pool($this->client->guzzleClient, $requests(), [
                 'concurrency' => $concurrency,
-                'rejected' => function (RequestException $reason, int $index) {
+                'rejected' => function (RequestException|RuntimeException $reason, int $index) {
                     throw UnableToWriteFile::atLocation($index, $reason->getMessage());
                 },
             ]);

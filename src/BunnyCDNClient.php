@@ -11,14 +11,14 @@ use Psr\Http\Client\ClientExceptionInterface;
 
 class BunnyCDNClient
 {
-    public Guzzle $client;
+    public Guzzle $guzzleClient;
 
     public function __construct(
         public string $storage_zone_name,
         private string $api_key,
         private string $region = BunnyCDNRegion::FALKENSTEIN
     ) {
-        $this->client = new Guzzle();
+        $this->guzzleClient = new Guzzle();
     }
 
     private static function get_base_url($region): string
@@ -54,7 +54,7 @@ class BunnyCDNClient
      */
     private function request(Request $request, array $options = []): mixed
     {
-        $contents = $this->client->send($request, $options)->getBody()->getContents();
+        $contents = $this->guzzleClient->send($request, $options)->getBody()->getContents();
 
         return json_decode($contents, true) ?? $contents;
     }
@@ -125,7 +125,7 @@ class BunnyCDNClient
     public function stream(string $path)
     {
         try {
-            return $this->client->send($this->createRequest($path), ['stream' => true])->getBody()->detach();
+            return $this->guzzleClient->send($this->createRequest($path), ['stream' => true])->getBody()->detach();
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw match ($e->getCode()) {
