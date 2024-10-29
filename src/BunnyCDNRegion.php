@@ -10,7 +10,7 @@ class BunnyCDNRegion
 
     public const NEW_YORK = 'ny';
 
-    public const LOS_ANGELAS = 'la';
+    public const LOS_ANGELES = 'la';
 
     public const SINGAPORE = 'sg';
 
@@ -23,4 +23,9 @@ class BunnyCDNRegion
     public const JOHANNESBURG = 'jh';
 
     public const DEFAULT = self::FALKENSTEIN;
+
+    /**
+     * @deprecated Use LOS_ANGELES instead.
+     */
+    public const LOS_ANGELAS = 'la';
 }
