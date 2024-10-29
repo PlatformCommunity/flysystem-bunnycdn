@@ -3,6 +3,9 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use Faker\Factory;
+use GuzzleHttp\Client as Guzzle;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
 use League\Flysystem\Filesystem;
@@ -13,11 +16,13 @@ use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToMoveFile;
 use League\Flysystem\UnableToProvideChecksum;
 use League\Flysystem\UnableToRetrieveMetadata;
+use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\Visibility;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
+use PlatformCommunity\Flysystem\BunnyCDN\WriteBatchFile;
 use Throwable;
 
 if (\is_file(__DIR__.'/ClientDI.php')) {
@@ -54,7 +59,34 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
             return new BunnyCDNClient($storage_zone, $api_key, $region ?? BunnyCDNRegion::DEFAULT);
         }
 
-        return new MockClient('test_storage_zone', '123');
+        $mockedClient = new MockClient('test_storage_zone', '123');
+
+        $mockedClient->guzzleClient = new Guzzle([
+            'handler' => function (Request $request) use ($mockedClient) {
+                $path = $request->getUri()->getPath();
+                $method = $request->getMethod();
+
+                if ($method === 'PUT' && $path === 'destination.txt') {
+                    $mockedClient->filesystem->write('destination.txt', 'text');
+
+                    return new Response(200);
+                }
+
+                if ($method === 'PUT' && $path === 'destination2.txt') {
+                    $mockedClient->filesystem->write('destination2.txt', 'text2');
+
+                    return new Response(200);
+                }
+
+                if ($method === 'PUT' && \in_array($path, ['failing.txt', 'failing2.txt'])) {
+                    throw new \RuntimeException('Failed to write file');
+                }
+
+                throw new \RuntimeException('Unexpected request: '.$method.' '.$path);
+            },
+        ]);
+
+        return $mockedClient;
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
@@ -474,11 +506,71 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         $this->runScenario(function () {
             $adapter = $this->adapter();
 
-            $this->adapter()->write('test.json', json_encode(['test' => 123]), new Config([]));
+            $adapter->write('test.json', json_encode(['test' => 123]), new Config([]));
 
             $response = $adapter->read('/test.json');
 
             $this->assertIsString($response);
+        });
+    }
+
+    public function test_write_batch(): void
+    {
+        $this->runScenario(function () {
+            $firstTmpFile = \tmpfile();
+            fwrite($firstTmpFile, 'text');
+            $firstTmpPath = stream_get_meta_data($firstTmpFile)['uri'];
+
+            $secondTmpFile = \tmpfile();
+            fwrite($secondTmpFile, 'text2');
+            $secondTmpPath = stream_get_meta_data($secondTmpFile)['uri'];
+
+            $adapter = $this->adapter();
+
+            $adapter->writeBatch(
+                [
+                    new WriteBatchFile($firstTmpPath, 'destination.txt'),
+                    new WriteBatchFile($secondTmpPath, 'destination2.txt'),
+                ],
+                new Config()
+            );
+
+            \fclose($firstTmpFile);
+            \fclose($secondTmpFile);
+
+            $this->assertSame('text', $adapter->read('destination.txt'));
+            $this->assertSame('text2', $adapter->read('destination2.txt'));
+        });
+    }
+
+    public function test_failing_write_batch(): void
+    {
+        if (self::$isLive) {
+            $this->markTestSkipped('This test is not applicable in live mode');
+        }
+
+        $this->runScenario(function () {
+            $firstTmpFile = \tmpfile();
+            fwrite($firstTmpFile, 'text');
+            $firstTmpPath = stream_get_meta_data($firstTmpFile)['uri'];
+
+            $secondTmpFile = \tmpfile();
+            fwrite($secondTmpFile, 'text2');
+            $secondTmpPath = stream_get_meta_data($firstTmpFile)['uri'];
+
+            $adapter = $this->adapter();
+
+            $this->expectException(UnableToWriteFile::class);
+            $adapter->writeBatch(
+                [
+                    new WriteBatchFile($firstTmpPath, 'failing.txt'),
+                    new WriteBatchFile($secondTmpPath, 'failing2.txt'),
+                ],
+                new Config()
+            );
+
+            \fclose($firstTmpFile);
+            \fclose($secondTmpFile);
         });
     }
 }

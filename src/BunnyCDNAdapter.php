@@ -3,6 +3,8 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
 use Exception;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Pool;
 use League\Flysystem\CalculateChecksumFromStream;
 use League\Flysystem\ChecksumProvider;
 use League\Flysystem\Config;
@@ -35,27 +37,8 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 {
     use CalculateChecksumFromStream;
 
-    /**
-     * Pull Zone URL
-     *
-     * @var string
-     */
-    private string $pullzone_url;
-
-    /**
-     * @var BunnyCDNClient
-     */
-    private BunnyCDNClient $client;
-
-    /**
-     * @param  BunnyCDNClient  $client
-     * @param  string  $pullzone_url
-     */
-    public function __construct(BunnyCDNClient $client, string $pullzone_url = '')
+    public function __construct(private BunnyCDNClient $client, private string $pullzone_url = '')
     {
-        $this->client = $client;
-        $this->pullzone_url = $pullzone_url;
-
         if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
             throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
         }
@@ -70,12 +53,9 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function copy($source, $destination, Config $config): void
     {
         try {
-            /** @var array<string> $files */
-            $files = iterator_to_array($this->getFiles($source));
-
             $sourceLength = \strlen($source);
 
-            foreach ($files as $file) {
+            foreach ($this->getFiles($source) as $file) {
                 $this->copyFile($file, $destination.\substr($file, $sourceLength), $config);
             }
         } catch (UnableToReadFile|UnableToWriteFile $exception) {
@@ -223,6 +203,34 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function writeStream($path, $contents, Config $config): void
     {
         $this->write($path, stream_get_contents($contents), $config);
+    }
+
+    /**
+     * @param  WriteBatchFile[]  $writeBatches
+     * @param  Config  $config
+     * @return void
+     */
+    public function writeBatch(array $writeBatches, Config $config): void
+    {
+        $concurrency = (int) $config->get('concurrency', 50);
+
+        foreach (\array_chunk($writeBatches, $concurrency) as $batch) {
+            $requests = function () use ($batch) {
+                /** @var WriteBatchFile $file */
+                foreach ($batch as $file) {
+                    yield $this->client->getUploadRequest($file->targetPath, \file_get_contents($file->localPath));
+                }
+            };
+
+            $pool = new Pool($this->client->guzzleClient, $requests(), [
+                'concurrency' => $concurrency,
+                'rejected' => function (RequestException|RuntimeException $reason, int $index) {
+                    throw UnableToWriteFile::atLocation($index, $reason->getMessage());
+                },
+            ]);
+
+            $pool->promise()->wait();
+        }
     }
 
     /**

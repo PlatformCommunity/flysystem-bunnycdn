@@ -3,6 +3,8 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use Faker\Factory;
+use GuzzleHttp\Client as Guzzle;
+use GuzzleHttp\Psr7\Request;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemException;
@@ -19,6 +21,8 @@ class MockClient extends BunnyCDNClient
      * @var Filesystem
      */
     public Filesystem $filesystem;
+
+    public Guzzle $guzzleClient;
 
     public function __construct(string $storage_zone_name, string $api_key, string $region = '')
     {
@@ -41,8 +45,10 @@ class MockClient extends BunnyCDNClient
                         'Checksum' => hash('sha256', $this->filesystem->read($file->path())),
                     ]);
             })->toArray();
-        } catch (FilesystemException $exception) {
+        } catch (FilesystemException) {
         }
+
+        return [];
     }
 
     /**
@@ -81,8 +87,10 @@ class MockClient extends BunnyCDNClient
                 'HttpCode' => 201,
                 'Message' => 'File uploaded.',
             ];
-        } catch (FilesystemException $exception) {
+        } catch (FilesystemException) {
         }
+
+        return [];
     }
 
     /**
@@ -98,8 +106,10 @@ class MockClient extends BunnyCDNClient
                 'HttpCode' => 201,
                 'Message' => 'Directory created.',
             ];
-        } catch (FilesystemException $exception) {
+        } catch (FilesystemException) {
         }
+
+        return [];
     }
 
     /**
@@ -121,14 +131,19 @@ class MockClient extends BunnyCDNClient
                 'HttpCode' => 200,
                 'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
             ];
-        } catch (NotFoundException $e) {
+        } catch (NotFoundException) {
             throw new NotFoundException('404');
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return [
                 'HttpCode' => 404,
                 'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
             ];
         }
+    }
+
+    public function getUploadRequest(string $path, $contents): Request
+    {
+        return new Request('PUT', $path, [], $contents);
     }
 
     private static function example_file($path = '/directory/test.png', $storage_zone = 'storage_zone', $override = []): array
