@@ -5,6 +5,8 @@ on:
     branches: [ master, v2, v3 ]
   pull_request:
     branches: [ master, v2, v3 ]
+  schedule:
+    -   cron: '10 16 * * *'
 
 jobs:
   get-php-versions:
