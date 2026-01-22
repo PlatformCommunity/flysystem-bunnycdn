@@ -81,7 +81,11 @@ class MockClient extends BunnyCDNClient
     public function upload(string $path, $contents): array
     {
         try {
-            $this->filesystem->write($path, $contents);
+            if (is_resource($contents)) {
+                $this->filesystem->writeStream($path, $contents);
+            } else {
+                $this->filesystem->write($path, $contents);
+            }
 
             return [
                 'HttpCode' => 201,
@@ -129,14 +133,14 @@ class MockClient extends BunnyCDNClient
 
             return [
                 'HttpCode' => 200,
-                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+                'Message' => 'File deleted successfully.',
             ];
         } catch (NotFoundException) {
             throw new NotFoundException('404');
         } catch (\Exception) {
             return [
                 'HttpCode' => 404,
-                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+                'Message' => 'File deleted successfully.',
             ];
         }
     }

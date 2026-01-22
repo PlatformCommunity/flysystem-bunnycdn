@@ -4,6 +4,8 @@ namespace PlatformCommunity\Flysystem\BunnyCDN;
 
 use GuzzleHttp\Client as Guzzle;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Handler\CurlHandler;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Request;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
@@ -18,7 +20,11 @@ class BunnyCDNClient
         private string $api_key,
         private string $region = BunnyCDNRegion::FALKENSTEIN
     ) {
-        $this->guzzleClient = new Guzzle();
+        $handler = HandlerStack::create(new CurlHandler());
+
+        $this->guzzleClient = new Guzzle([
+            'handler' => $handler,
+        ]);
     }
 
     private static function get_base_url($region): string
@@ -138,14 +144,18 @@ class BunnyCDNClient
 
     public function getUploadRequest(string $path, $contents): Request
     {
-        return $this->createRequest(
-            $path,
-            'PUT',
-            [
-                'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
-            ],
-            $contents
-        );
+        $headers = [
+            'Content-Type' => 'application/octet-stream',
+        ];
+
+        if (is_resource($contents)) {
+            $fstat = fstat($contents);
+            if (isset($fstat['size'])) {
+                $headers['Content-Length'] = $fstat['size'];
+            }
+        }
+
+        return $this->createRequest($path, 'PUT', $headers, $contents);
     }
 
     /**
@@ -158,7 +168,11 @@ class BunnyCDNClient
     public function upload(string $path, $contents): mixed
     {
         try {
-            return $this->request($this->getUploadRequest($path, $contents));
+            return $this->request($this->getUploadRequest($path, $contents), [
+                'connect_timeout' => 5,
+                'timeout' => 60 * 60, // 1 hour
+                'expect' => true,
+            ]);
             // @codeCoverageIgnoreStart
         } catch (GuzzleException $e) {
             throw new BunnyCDNException($e->getMessage());
