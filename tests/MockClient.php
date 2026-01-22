@@ -133,14 +133,14 @@ class MockClient extends BunnyCDNClient
 
             return [
                 'HttpCode' => 200,
-                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+                'Message' => 'File deleted successfully.',
             ];
         } catch (NotFoundException) {
             throw new NotFoundException('404');
         } catch (\Exception) {
             return [
                 'HttpCode' => 404,
-                'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+                'Message' => 'File deleted successfully.',
             ];
         }
     }

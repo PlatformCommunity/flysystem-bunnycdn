@@ -177,7 +177,7 @@ class ClientTest extends TestCase
         $this->assertIsArray($response);
         $this->assertEquals([
             'HttpCode' => 200,
-            'Message' => 'File deleted successfully.', // ಠ_ಠ Spelling @bunny.net
+            'Message' => 'File deleted successfully.',
         ], $response);
     }
 
