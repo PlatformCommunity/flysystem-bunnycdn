@@ -81,7 +81,11 @@ class MockClient extends BunnyCDNClient
     public function upload(string $path, $contents): array
     {
         try {
-            $this->filesystem->write($path, $contents);
+            if (is_resource($contents)) {
+                $this->filesystem->writeStream($path, $contents);
+            } else {
+                $this->filesystem->write($path, $contents);
+            }
 
             return [
                 'HttpCode' => 201,

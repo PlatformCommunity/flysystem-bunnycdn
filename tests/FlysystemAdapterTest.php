@@ -326,6 +326,28 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     /**
      * @test
      */
+    public function writing_a_file_using_a_stream(): void
+    {
+        $this->runScenario(function () {
+            $adapter = $this->adapter();
+
+            $stream = tmpfile();
+            fwrite($stream, 'contents');
+            rewind($stream);
+
+            $adapter->writeStream('path.txt', $stream, new Config());
+
+            $this->assertTrue($adapter->fileExists('path.txt'));
+            $this->assertEquals('contents', $adapter->read('path.txt'));
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        });
+    }
+
+    /**
+     * @test
+     */
     public function moving_a_file_to_same_destination(): void
     {
         $this->runScenario(function () {
