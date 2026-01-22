@@ -202,7 +202,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function writeStream($path, $contents, Config $config): void
     {
-        $this->write($path, stream_get_contents($contents), $config);
+        $this->write($path, $contents, $config);
     }
 
     /**

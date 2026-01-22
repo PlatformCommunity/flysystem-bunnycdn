@@ -177,7 +177,7 @@ class ClientTest extends TestCase
         $this->assertIsArray($response);
         $this->assertEquals([
             'HttpCode' => 200,
-            'Message' => 'File deleted successfuly.', // ಠ_ಠ Spelling @bunny.net
+            'Message' => 'File deleted successfully.',
         ], $response);
     }
 
@@ -191,5 +191,28 @@ class ClientTest extends TestCase
     {
         $this->expectException(NotFoundException::class);
         $this->client->delete('file_not_found.txt');
+    }
+
+    public function test_upload_stream()
+    {
+        $stream = tmpfile();
+        $text = 'testing upload';
+        fwrite($stream, $text);
+        rewind($stream);
+
+        $response = $this->client->upload('/test_upload_stream.txt', $stream);
+
+        $this->assertIsArray($response);
+
+        $this->assertEquals([
+            'HttpCode' => 201,
+            'Message' => 'File uploaded.',
+        ], $response);
+
+        $this->assertEquals($text, $this->client->download('/test_upload_stream.txt'));
+
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
     }
 }
