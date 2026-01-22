@@ -20,7 +20,8 @@
         "league/flysystem-memory": "^3.0",
         "league/flysystem-path-prefixing": "^3.3",
         "fzaninotto/faker": "^1.5",
-        "laravel/pint": "^0.2.3"
+        "laravel/pint": "^0.2.3",
+        "phpstan/phpstan": "^2.1"
     },
     "autoload-dev": {
         "psr-4": {
