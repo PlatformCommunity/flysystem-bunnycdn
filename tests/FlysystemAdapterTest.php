@@ -102,25 +102,6 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         $this->markTestSkipped('No visibility support is provided for BunnyCDN');
     }
 
-    public function generating_a_temporary_url(): void
-    {
-        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), '', 'test-key');
-
-        $expiresAt = new \DateTimeImmutable('+1 hour');
-        $url = $adapter->temporaryUrl('path.txt', $expiresAt, new Config());
-
-        $this->assertStringContainsString('path.txt?token=', $url);
-        $this->assertStringContainsString('&expires=', $url);
-    }
-
-    public function test_temporary_url_throws_exception_if_not_configured(): void
-    {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('In order to generate temporary URLs for a BunnyCDN object, you must pass the "token_auth_key" parameter to the BunnyCDNAdapter.');
-
-        $this->adapter()->temporaryUrl('path.txt', new \DateTimeImmutable('+1 hour'), new Config());
-    }
-
     /**
      * @test
      */

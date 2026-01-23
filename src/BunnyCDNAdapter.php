@@ -2,7 +2,6 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
-use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Exception;
 use GuzzleHttp\Exception\RequestException;
@@ -29,8 +28,9 @@ use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\UnableToSetVisibility;
 use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\UrlGeneration\PublicUrlGenerator;
-use League\Flysystem\Visibility;
 use League\Flysystem\UrlGeneration\TemporaryUrlGenerator;
+use League\Flysystem\UnableToGenerateTemporaryUrl;
+use League\Flysystem\Visibility;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use RuntimeException;
@@ -40,15 +40,25 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 {
     use CalculateChecksumFromStream;
 
+    private string $token_auth_key = '';
+
     public function __construct(
         private BunnyCDNClient $client,
         private string $pullzone_url = '',
-        private string $token_auth_key = ''
-    )
-    {
+    ) {
         if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
             throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
         }
+    }
+
+    /**
+     * Set the token auth key for generating temporaryUrls.
+     */
+    public function setTokenAuthKey(string $tokenAuthKey): BunnyCDNAdapter
+    {
+        $this->token_auth_key = $tokenAuthKey;
+
+        return $this;
     }
 
     /**
@@ -564,7 +574,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function temporaryUrl(string $path, DateTimeInterface $expiresAt, Config $config): string
     {
         if ($this->token_auth_key === '') {
-            throw new RuntimeException('In order to generate temporary URLs for a BunnyCDN object, you must pass the "token_auth_key" parameter to the BunnyCDNAdapter.');
+            throw new UnableToGenerateTemporaryUrl('In order to generate temporary URLs for a BunnyCDN object, you must call the `setTokenAuthKey` method on the BunnyCDNAdapter.', $path);
         }
 
         // convert our expiration to a unix timestamp
@@ -580,22 +590,22 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 
         // concatenate all of our data
         return $path
-            . (str_contains($path, '?') ? '&' : '?')
-            . 'token=' . $this->buildSigningKey($path, $expiration, $params)
-            . '&expires=' . $expiration
-            . ($params ? '&' . http_build_query($params) : null);
+            .(str_contains($path, '?') ? '&' : '?')
+            .'token='.$this->buildSigningKey($path, $expiration, $params)
+            .'&expires='.$expiration
+            .($params ? '&'.http_build_query($params) : null);
     }
 
     private function buildSigningKey($path, int $expiration, array $params): string
     {
         // prefix our path
-        $path = str_starts_with($path, '/') ? $path : '/' . $path;
+        $path = str_starts_with($path, '/') ? $path : '/'.$path;
 
         // process our query params
-        $query = implode('&', array_map(fn($k, $v) => $k  . '=' . $v, array_keys($params), $params));
+        $query = implode('&', array_map(fn ($k, $v) => $k.'='.$v, array_keys($params), $params));
 
         // now generate and hash our payload
-        $payload = $this->token_auth_key . $path . (string)$expiration . $query;
+        $payload = $this->token_auth_key.$path.(string) $expiration.$query;
         $hash = hash('sha256', $payload, true);
 
         // sanitise and base64 encode it
