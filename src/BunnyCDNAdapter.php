@@ -2,6 +2,8 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN;
 
+use Carbon\CarbonInterface;
+use DateTimeInterface;
 use Exception;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Pool;
@@ -28,16 +30,21 @@ use League\Flysystem\UnableToSetVisibility;
 use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\UrlGeneration\PublicUrlGenerator;
 use League\Flysystem\Visibility;
+use League\Flysystem\UrlGeneration\TemporaryUrlGenerator;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use RuntimeException;
 use TypeError;
 
-class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumProvider
+class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumProvider, TemporaryUrlGenerator
 {
     use CalculateChecksumFromStream;
 
-    public function __construct(private BunnyCDNClient $client, private string $pullzone_url = '')
+    public function __construct(
+        private BunnyCDNClient $client,
+        private string $pullzone_url = '',
+        private string $token_auth_key = ''
+    )
     {
         if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
             throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
@@ -552,6 +559,47 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         }
 
         return rtrim($this->pullzone_url, '/').'/'.ltrim($path, '/');
+    }
+
+    public function temporaryUrl(string $path, DateTimeInterface $expiresAt, Config $config): string
+    {
+        if ($this->token_auth_key === '') {
+            throw new RuntimeException('In order to generate temporary URLs for a BunnyCDN object, you must pass the "token_auth_key" parameter to the BunnyCDNAdapter.');
+        }
+
+        // convert our expiration to a unix timestamp
+        $expiration = $expiresAt->getTimestamp();
+
+        // extract elements from our path
+        $parts = parse_url($path);
+        $path = $parts['path'];
+
+        // extract our query params
+        parse_str($parts['query'] ?? '', $params);
+        ksort($params);
+
+        // concatenate all of our data
+        return $path
+            . (str_contains($path, '?') ? '&' : '?')
+            . 'token=' . $this->buildSigningKey($path, $expiration, $params)
+            . '&expires=' . $expiration
+            . ($params ? '&' . http_build_query($params) : null);
+    }
+
+    private function buildSigningKey($path, int $expiration, array $params): string
+    {
+        // prefix our path
+        $path = str_starts_with($path, '/') ? $path : '/' . $path;
+
+        // process our query params
+        $query = implode('&', array_map(fn($k, $v) => $k  . '=' . $v, array_keys($params), $params));
+
+        // now generate and hash our payload
+        $payload = $this->token_auth_key . $path . (string)$expiration . $query;
+        $hash = hash('sha256', $payload, true);
+
+        // sanitise and base64 encode it
+        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($hash));
     }
 
     private static function parse_bunny_timestamp(string $timestamp): int
