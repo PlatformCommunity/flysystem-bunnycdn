@@ -15,7 +15,7 @@
         "league/mime-type-detection": "^1.11"
     },
     "require-dev": {
-        "phpunit/phpunit": "@stable",
+        "phpunit/phpunit": "^10.0",
         "league/flysystem-adapter-test-utilities": "^3",
         "league/flysystem-memory": "^3.0",
         "league/flysystem-path-prefixing": "^3.3",

@@ -38,7 +38,10 @@ class PrefixTest extends FilesystemAdapterTestCase
 
     private static function bunnyCDNAdapter(): BunnyCDNAdapter
     {
-        return new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
+        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
+        $adapter->setTokenAuthKey('test-token-auth-key');
+
+        return $adapter;
     }
 
     public static function createFilesystemAdapter(): FilesystemAdapter
@@ -63,18 +66,6 @@ class PrefixTest extends FilesystemAdapterTestCase
     public function setting_visibility(): void
     {
         $this->markTestSkipped('No visibility support is provided for BunnyCDN');
-    }
-
-    public function generating_a_temporary_url(): void
-    {
-        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), '', 'test-key');
-        $prefixAdapter = new PathPrefixedAdapter($adapter, self::PREFIX_PATH);
-
-        $expiresAt = new \DateTimeImmutable('+1 hour');
-        $url = $prefixAdapter->temporaryUrl('path.txt', $expiresAt, new Config());
-
-        $this->assertStringContainsString(self::PREFIX_PATH.'/path.txt?token=', $url);
-        $this->assertStringContainsString('&expires=', $url);
     }
 
     /**
@@ -106,6 +97,23 @@ class PrefixTest extends FilesystemAdapterTestCase
             // $visibility = $adapter->visibility('path.txt')->visibility();
             // $this->assertEquals(Visibility::PRIVATE, $visibility); // Commented out of this test
         });
+    }
+
+    /**
+     * @test
+     */
+    public function generating_a_temporary_url(): void
+    {
+        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
+        $adapter->setTokenAuthKey('test-token-auth-key');
+
+        $prefixAdapter = new PathPrefixedAdapter($adapter, self::PREFIX_PATH);
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $prefixAdapter->temporaryUrl('path.txt', $expiresAt, new Config());
+
+        $this->assertStringContainsString(self::PREFIX_PATH.'/path.txt?token=', $url);
+        $this->assertStringContainsString('&expires=', $url);
     }
 
     /**

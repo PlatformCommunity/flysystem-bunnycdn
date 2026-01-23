@@ -13,7 +13,6 @@ use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\UnableToCopyFile;
 use League\Flysystem\UnableToDeleteFile;
-use League\Flysystem\UnableToGenerateTemporaryUrl;
 use League\Flysystem\UnableToMoveFile;
 use League\Flysystem\UnableToProvideChecksum;
 use League\Flysystem\UnableToRetrieveMetadata;
@@ -92,7 +91,10 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
 
     public static function createFilesystemAdapter(): FilesystemAdapter
     {
-        return new BunnyCDNAdapter(self::bunnyCDNClient(), static::$publicUrl);
+        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), static::$publicUrl);
+        $adapter->setTokenAuthKey('test-token-auth-key');
+
+        return $adapter;
     }
 
     /**
@@ -101,25 +103,6 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     public function setting_visibility(): void
     {
         $this->markTestSkipped('No visibility support is provided for BunnyCDN');
-    }
-
-    public function generating_a_temporary_url(): void
-    {
-        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), '', 'test-key');
-
-        $expiresAt = new \DateTimeImmutable('+1 hour');
-        $url = $adapter->temporaryUrl('path.txt', $expiresAt, new Config());
-
-        $this->assertStringContainsString('path.txt?token=', $url);
-        $this->assertStringContainsString('&expires=', $url);
-    }
-
-    public function test_temporary_url_throws_exception_if_not_configured(): void
-    {
-        $this->expectException(UnableToGenerateTemporaryUrl::class);
-        $this->expectExceptionMessage('In order to generate temporary URLs for a BunnyCDN object, you must pass the "token_auth_key" parameter to the BunnyCDNAdapter.');
-
-        $this->adapter()->temporaryUrl('path.txt', new \DateTimeImmutable('+1 hour'), new Config());
     }
 
     /**
@@ -323,6 +306,21 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     /**
      * @test
      */
+    public function generating_a_temporary_url(): void
+    {
+        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), '');
+        $adapter->setTokenAuthKey('test-key');
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $adapter->temporaryUrl('path.txt', $expiresAt, new Config());
+
+        $this->assertStringContainsString('path.txt?token=', $url);
+        $this->assertStringContainsString('&expires=', $url);
+    }
+
+    /**
+     * @test
+     */
     public function overwriting_a_file(): void
     {
         $this->runScenario(function () {
@@ -412,6 +410,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     public function test_checksum_throws_error_with_empty_checksum_from_client(): void
     {
         $client = $this->createMock(BunnyCDNClient::class);
+
         $client->expects(self::exactly(1))->method('list')->willReturnCallback(
             function () {
                 ['file' => $file, 'dir' => $dir] = Util::splitPathIntoDirectoryAndFile('file.txt');
