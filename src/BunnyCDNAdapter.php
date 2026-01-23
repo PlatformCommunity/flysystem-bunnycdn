@@ -582,14 +582,14 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 
         // extract elements from our path
         $parts = parse_url($path);
-        $path = $parts['path'];
+        $path = str_starts_with($parts['path'], '/') ? $path : '/'.$path;
 
         // extract our query params
         parse_str($parts['query'] ?? '', $params);
         ksort($params);
 
         // concatenate all of our data
-        return $path
+        return $this->pullzone_url.$path
             .(str_contains($path, '?') ? '&' : '?')
             .'token='.$this->buildSigningKey($path, $expiration, $params)
             .'&expires='.$expiration
@@ -598,9 +598,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 
     private function buildSigningKey($path, int $expiration, array $params): string
     {
-        // prefix our path
-        $path = str_starts_with($path, '/') ? $path : '/'.$path;
-
         // process our query params
         $query = implode('&', array_map(fn ($k, $v) => $k.'='.$v, array_keys($params), $params));
 
