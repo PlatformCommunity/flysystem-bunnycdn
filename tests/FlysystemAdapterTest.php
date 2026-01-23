@@ -392,6 +392,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
     public function test_checksum_throws_error_with_empty_checksum_from_client(): void
     {
         $client = $this->createMock(BunnyCDNClient::class);
+
         $client->expects(self::exactly(1))->method('list')->willReturnCallback(
             function () {
                 ['file' => $file, 'dir' => $dir] = Util::splitPathIntoDirectoryAndFile('file.txt');
