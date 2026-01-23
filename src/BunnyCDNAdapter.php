@@ -40,14 +40,25 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 {
     use CalculateChecksumFromStream;
 
+    private string $token_auth_key = '';
+
     public function __construct(
         private BunnyCDNClient $client,
         private string $pullzone_url = '',
-        private string $token_auth_key = ''
     ) {
         if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
             throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
         }
+    }
+
+    /**
+     * Set the token auth key for generating temporaryUrls.
+     */
+    public function setTokenAuthKey(string $tokenAuthKey): BunnyCDNAdapter
+    {
+        $this->token_auth_key = $tokenAuthKey;
+
+        return $this;
     }
 
     /**
@@ -563,7 +574,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function temporaryUrl(string $path, DateTimeInterface $expiresAt, Config $config): string
     {
         if ($this->token_auth_key === '') {
-            throw new UnableToGenerateTemporaryUrl('In order to generate temporary URLs for a BunnyCDN object, you must pass the "token_auth_key" parameter to the BunnyCDNAdapter.', $path);
+            throw new UnableToGenerateTemporaryUrl('In order to generate temporary URLs for a BunnyCDN object, you must call the `setTokenAuthKey` method on the BunnyCDNAdapter.', $path);
         }
 
         // convert our expiration to a unix timestamp

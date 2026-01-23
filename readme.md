@@ -28,6 +28,9 @@ $adapter = new BunnyCDNAdapter(
     )
 );
 
+// for temporary URL support, define a signing key
+$adapter->setTokenAuthKey('token-auth-signing-key');
+
 $filesystem = new Filesystem($adapter);
 ```
 
@@ -45,6 +48,10 @@ $adapter = new BunnyCDNAdapter(
     ),
     'https://testing.b-cdn.net/' # Pull Zone URL
 );
+
+// for temporary URL support, define a signing key
+$adapter->setTokenAuthKey('token-auth-signing-key');
+
 $filesystem = new Filesystem($adapter);
 ```
 
@@ -52,7 +59,8 @@ _Note: You can also use your own domain name if it's configured in the pull zone
 
 Once you add your pull zone, you can use the `->getUrl($path)`, or in Laravel, the `->url($path)` command to get the fully qualified public URL of your BunnyCDN assets.
 
-## Usage in Laravel 9
+## Usage in Laravel 9 & up
+
 To add BunnyCDN adapter as a custom storage adapter in Laravel 9, install using the `v3` composer installer.
 
 ```bash
@@ -78,6 +86,9 @@ Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSys
                 ),
                 $config['pull_zone']
             );
+            
+            // for temporary URL support, define a signing key
+            $adapter->setTokenAuthKey('token-auth-signing-key');
 
             return new FilesystemAdapter(
                 new Filesystem($adapter, $config),
@@ -98,6 +109,7 @@ Finally, add the `bunnycdn` driver into your `config/filesystems.php` configurat
             'storage_zone' => env('BUNNYCDN_STORAGE_ZONE'),
             'pull_zone' => env('BUNNYCDN_PULL_ZONE'),
             'api_key' => env('BUNNYCDN_API_KEY'),
+            'token_auth_key' => env('BUNNYCDN_TOKEN_AUTH_KEY', ''), // optional if you'd like signed URLs
             'region' => env('BUNNYCDN_REGION', \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion::DEFAULT)
         ],
         
@@ -111,6 +123,7 @@ BUNNYCDN_STORAGE_ZONE=testing_storage_zone
 BUNNYCDN_PULL_ZONE=https://testing.b-cdn.net
 BUNNYCDN_API_KEY="api-key"
 # BUNNYCDN_REGION=uk
+#BUNNYCDN_TOKEN_AUTH_KEY="your-token-auth-key" (optional, under CDN > Security > Token Authentication)
 ```
 
 After that, you can use the `bunnycdn` disk in Laravel 9.
