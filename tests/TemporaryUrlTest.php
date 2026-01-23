@@ -10,7 +10,6 @@ use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 
 class TemporaryUrlTest extends TestCase
 {
-
     public function test_temporary_url_throws_exception_if_not_configured()
     {
         $this->expectException(UnableToGenerateTemporaryUrl::class);
@@ -33,6 +32,6 @@ class TemporaryUrlTest extends TestCase
         $url = $adapter->temporaryUrl('testing.txt', $expiresAt, new Config());
 
         $this->assertStringContainsString('testing.txt?token=', $url);
-        $this->assertStringContainsString('expires=' . $expiresAt->getTimestamp(), $url);
+        $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
     }
 }
