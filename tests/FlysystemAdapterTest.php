@@ -91,7 +91,10 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
 
     public static function createFilesystemAdapter(): FilesystemAdapter
     {
-        return new BunnyCDNAdapter(self::bunnyCDNClient(), static::$publicUrl);
+        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), static::$publicUrl);
+        $adapter->setTokenAuthKey('test-token-auth-key');
+
+        return $adapter;
     }
 
     /**
@@ -298,6 +301,17 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         $this->expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         $myAdapter = new BunnyCDNAdapter(static::bunnyCDNClient());
         $myAdapter->publicUrl('/path.txt', new Config());
+    }
+
+    /**
+     * @test
+     */
+    public function generating_a_temporary_url(): void
+    {
+        if (! self::$isLive) {
+            $this->markTestSkipped('Temporary URL fetching requires a live BunnyCDN backend');
+        }
+        parent::generating_a_temporary_url();
     }
 
     /**
