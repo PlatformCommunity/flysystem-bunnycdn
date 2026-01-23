@@ -104,7 +104,16 @@ class PrefixTest extends FilesystemAdapterTestCase
      */
     public function generating_a_temporary_url(): void
     {
-        $this->markTestSkipped('Temporary URL fetching requires a live BunnyCDN backend');
+        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
+        $adapter->setTokenAuthKey('test-token-auth-key');
+
+        $prefixAdapter = new PathPrefixedAdapter($adapter, self::PREFIX_PATH);
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $prefixAdapter->temporaryUrl('path.txt', $expiresAt, new Config());
+
+        $this->assertStringContainsString(self::PREFIX_PATH.'/path.txt?token=', $url);
+        $this->assertStringContainsString('&expires=', $url);
     }
 
     /**

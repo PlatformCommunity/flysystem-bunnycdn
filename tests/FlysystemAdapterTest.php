@@ -308,10 +308,14 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
      */
     public function generating_a_temporary_url(): void
     {
-        if (! self::$isLive) {
-            $this->markTestSkipped('Temporary URL fetching requires a live BunnyCDN backend');
-        }
-        parent::generating_a_temporary_url();
+        $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), '');
+        $adapter->setTokenAuthKey('test-key');
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $adapter->temporaryUrl('path.txt', $expiresAt, new Config());
+
+        $this->assertStringContainsString('path.txt?token=', $url);
+        $this->assertStringContainsString('&expires=', $url);
     }
 
     /**
