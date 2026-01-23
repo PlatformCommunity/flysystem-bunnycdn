@@ -13,6 +13,7 @@ use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\UnableToCopyFile;
 use League\Flysystem\UnableToDeleteFile;
+use League\Flysystem\UnableToGenerateTemporaryUrl;
 use League\Flysystem\UnableToMoveFile;
 use League\Flysystem\UnableToProvideChecksum;
 use League\Flysystem\UnableToRetrieveMetadata;
@@ -115,7 +116,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
 
     public function test_temporary_url_throws_exception_if_not_configured(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(UnableToGenerateTemporaryUrl::class);
         $this->expectExceptionMessage('In order to generate temporary URLs for a BunnyCDN object, you must pass the "token_auth_key" parameter to the BunnyCDNAdapter.');
 
         $this->adapter()->temporaryUrl('path.txt', new \DateTimeImmutable('+1 hour'), new Config());

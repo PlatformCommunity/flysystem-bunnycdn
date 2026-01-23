@@ -73,7 +73,7 @@ class PrefixTest extends FilesystemAdapterTestCase
         $expiresAt = new \DateTimeImmutable('+1 hour');
         $url = $prefixAdapter->temporaryUrl('path.txt', $expiresAt, new Config());
 
-        $this->assertStringContainsString(self::PREFIX_PATH . '/path.txt?token=', $url);
+        $this->assertStringContainsString(self::PREFIX_PATH.'/path.txt?token=', $url);
         $this->assertStringContainsString('&expires=', $url);
     }
 
