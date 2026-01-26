@@ -25,13 +25,13 @@ class TemporaryUrlTest extends TestCase
     public function test_it_can_generate_signing_key()
     {
         $client = new BunnyCDNClient('test', 'test');
-        $adapter = new BunnyCDNAdapter($client, 'pz-key');
+        $adapter = new BunnyCDNAdapter($client, 'https://pz-url.co.uk');
         $adapter->setTokenAuthKey('test-auth-key');
 
         $expiresAt = new \DateTimeImmutable('+1 hour');
         $url = $adapter->temporaryUrl('testing.txt', $expiresAt, new Config());
 
-        $this->assertStringContainsString('testing.txt?token=', $url);
+        $this->assertStringContainsString('https://pz-url.co.uk/testing.txt?token=', $url);
         $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
     }
 }
