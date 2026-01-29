@@ -34,4 +34,22 @@ class TemporaryUrlTest extends TestCase
         $this->assertStringContainsString('https://pz-url.co.uk/testing.txt?token=', $url);
         $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
     }
+
+    public function test_it_will_accept_query_params()
+    {
+        $client = new BunnyCDNClient('test', 'test');
+        $adapter = new BunnyCDNAdapter($client, 'https://pz-url.co.uk');
+        $adapter->setTokenAuthKey('test-auth-key');
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $adapter->temporaryUrl('testing.txt', $expiresAt, new Config([
+            'withQueryParams' => [
+                'testParam' => 'testValue',
+            ],
+        ]));
+
+        $this->assertStringContainsString('https://pz-url.co.uk/testing.txt?token=', $url);
+        $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
+        $this->assertStringContainsString('testParam=testValue', $url);
+    }
 }

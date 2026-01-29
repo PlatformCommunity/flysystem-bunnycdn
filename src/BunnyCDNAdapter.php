@@ -586,6 +586,12 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 
         // extract our query params
         parse_str($parts['query'] ?? '', $params);
+
+        // check if we are passing additional query parameters
+        if (($queryParams = $config->get('withQueryParams')) && is_array($queryParams)) {
+            $params = array_merge($params, $queryParams);
+        }
+
         ksort($params);
 
         // concatenate all of our data
