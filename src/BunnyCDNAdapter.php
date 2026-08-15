@@ -51,7 +51,7 @@ class BunnyCDNAdapter implements ChecksumProvider, FilesystemAdapter, PublicUrlG
         private string $pullzone_url = '',
         private string $root = '',
     ) {
-        $this->root = Util::normalizePath($this->root);
+        $this->root = rtrim(Util::normalizePath($this->root), '/');
     }
 
     /**
@@ -212,6 +212,10 @@ class BunnyCDNAdapter implements ChecksumProvider, FilesystemAdapter, PublicUrlG
                 fn (WriteBatchFile $file) => $this->resolvePath($file->targetPath),
                 $batch
             );
+            $logicalPaths = \array_map(
+                fn (WriteBatchFile $file) => $file->targetPath,
+                $batch
+            );
 
             $requests = function () use ($batch, $paths) {
                 foreach ($paths as $index => $path) {
@@ -221,8 +225,8 @@ class BunnyCDNAdapter implements ChecksumProvider, FilesystemAdapter, PublicUrlG
 
             $pool = new Pool($this->client->guzzleClient, $requests(), [
                 'concurrency' => $concurrency,
-                'rejected' => function (RequestException|RuntimeException $reason, int $index) use ($paths) {
-                    throw UnableToWriteFile::atLocation($paths[$index] ?? (string) $index, $reason->getMessage());
+                'rejected' => function (RequestException|RuntimeException $reason, int $index) use ($logicalPaths) {
+                    throw UnableToWriteFile::atLocation($logicalPaths[$index] ?? (string) $index, $reason->getMessage());
                 },
             ]);
 
@@ -576,7 +580,7 @@ class BunnyCDNAdapter implements ChecksumProvider, FilesystemAdapter, PublicUrlG
      * @param  DateTimeInterface|int  $expiration  DateTime instance, or minutes from now
      * @param  array<string, mixed>  $options  Additional query parameters to sign into the URL
      */
-    public function getTemporaryUrl(string $path, $expiration, array $options = []): string
+    public function getTemporaryUrl(string $path, DateTimeInterface|int $expiration, array $options = []): string
     {
         $expiresAt = $expiration instanceof DateTimeInterface
             ? $expiration

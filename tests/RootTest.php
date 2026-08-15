@@ -148,6 +148,34 @@ class RootTest extends FilesystemAdapterTestCase
     }
 
     /**
+     * The root path is normalized: trailing slashes must not break scoping or URL generation.
+     */
+    #[Test]
+    public function root_with_trailing_slash_is_normalized(): void
+    {
+        $this->runScenario(function () {
+            $client = self::bunnyCDNClient();
+            $adapter = new BunnyCDNAdapter($client, 'https://example.org.local/assets/', self::ROOT_PATH.'/');
+
+            $adapter->write('folder/path.txt', 'contents', new Config);
+            $this->assertTrue($adapter->fileExists('folder/path.txt'));
+
+            $listing = \iterator_to_array($adapter->listContents('folder', false));
+            $this->assertCount(1, $listing);
+            $this->assertSame('folder/path.txt', $listing[0]['path']);
+
+            $this->assertSame(
+                'https://example.org.local/assets/'.self::ROOT_PATH.'/folder/path.txt',
+                $adapter->publicUrl('folder/path.txt', new Config)
+            );
+
+            $adapter->setTokenAuthKey('test-token-auth-key');
+            $url = $adapter->temporaryUrl('folder/path.txt', new \DateTimeImmutable('+1 hour'), new Config);
+            $this->assertStringContainsString(self::ROOT_PATH.'/folder/path.txt?token=', $url);
+        });
+    }
+
+    /**
      * PathPrefixedAdapter on top of a root-scoped adapter keeps working.
      */
     #[Test]
