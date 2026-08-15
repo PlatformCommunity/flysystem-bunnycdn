@@ -10,6 +10,7 @@ use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\PathPrefixing\PathPrefixedAdapter;
 use League\Flysystem\Visibility;
+use PHPUnit\Framework\Attributes\Test;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 
@@ -52,7 +53,7 @@ class PrefixTest extends FilesystemAdapterTestCase
         );
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         try {
             (new Filesystem(self::bunnyCDNAdapter()))->deleteDirectory('/'.self::PREFIX_PATH);
@@ -74,12 +75,11 @@ class PrefixTest extends FilesystemAdapterTestCase
 
     /**
      * We overwrite the test, because the original tries accessing the url
-     *
-     * @test
      */
+    #[Test]
     public function generating_a_public_url(): void
     {
-        $url = $this->adapter()->publicUrl('path.txt', new Config());
+        $url = $this->adapter()->publicUrl('path.txt', new Config);
 
         self::assertEquals('https://example.org.local/assets/path_prefix_12345/path.txt', $url);
     }
@@ -99,9 +99,7 @@ class PrefixTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function generating_a_temporary_url(): void
     {
         $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/');
@@ -110,15 +108,13 @@ class PrefixTest extends FilesystemAdapterTestCase
         $prefixAdapter = new PathPrefixedAdapter($adapter, self::PREFIX_PATH);
 
         $expiresAt = new \DateTimeImmutable('+1 hour');
-        $url = $prefixAdapter->temporaryUrl('path.txt', $expiresAt, new Config());
+        $url = $prefixAdapter->temporaryUrl('path.txt', $expiresAt, new Config);
 
         $this->assertStringContainsString(self::PREFIX_PATH.'/path.txt?token=', $url);
         $this->assertStringContainsString('&expires=', $url);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function get_checksum(): void
     {
         $adapter = $this->adapter();
@@ -127,11 +123,11 @@ class PrefixTest extends FilesystemAdapterTestCase
             $this->markTestSkipped('Adapter does not supply providing checksums');
         }
 
-        $adapter->write('path.txt', 'foobar', new Config());
+        $adapter->write('path.txt', 'foobar', new Config);
 
         $this->assertSame(
             '3858f62230ac3c915f300c664312c63f',
-            $adapter->checksum('path.txt', new Config())
+            $adapter->checksum('path.txt', new Config)
         );
 
         $this->assertSame(
@@ -140,16 +136,27 @@ class PrefixTest extends FilesystemAdapterTestCase
         );
     }
 
-    public function test_construct_throws_error(): void
+    public function test_construct_with_root_argument_scopes_operations(): void
     {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
-        new BunnyCDNAdapter(self::bunnyCDNClient(), 'https://example.org.local/assets/', 'thisisauselessarg');
+        $client = self::bunnyCDNClient();
+        $adapter = new BunnyCDNAdapter($client, 'https://example.org.local/assets/', self::PREFIX_PATH);
+        $adapter->setTokenAuthKey('test-token-auth-key');
+
+        $unscopedAdapter = new BunnyCDNAdapter($client, 'https://example.org.local/assets/');
+
+        $adapter->write('source.file.svg', 'root-scoped contents', new Config);
+        $this->assertTrue($adapter->fileExists('source.file.svg'));
+        $this->assertFalse($unscopedAdapter->fileExists('source.file.svg'));
+
+        $this->assertTrue($unscopedAdapter->fileExists(self::PREFIX_PATH.'/source.file.svg'));
+        $this->assertSame('root-scoped contents', $unscopedAdapter->read(self::PREFIX_PATH.'/source.file.svg'));
+
+        $adapter->delete('source.file.svg');
+        $this->assertFalse($adapter->fileExists('source.file.svg'));
+        $this->assertFalse($unscopedAdapter->fileExists(self::PREFIX_PATH.'/source.file.svg'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function prefix_path(): void
     {
         $this->runScenario(function () {
@@ -280,11 +287,10 @@ class PrefixTest extends FilesystemAdapterTestCase
     }
 
     /**
-     * @test
-     *
      * @throws FilesystemException
      * @throws \Throwable
      */
+    #[Test]
     public function prefix_path_not_in_meta_pr_36(): void
     {
         $this->dontRetryOnException();

@@ -17,9 +17,6 @@ use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class MockClient extends BunnyCDNClient
 {
-    /**
-     * @var Filesystem
-     */
     public Filesystem $filesystem;
 
     public Guzzle $guzzleClient;
@@ -27,13 +24,9 @@ class MockClient extends BunnyCDNClient
     public function __construct(string $storage_zone_name, string $api_key, string $region = '')
     {
         parent::__construct($storage_zone_name, $api_key, $region);
-        $this->filesystem = new Filesystem(new InMemoryFilesystemAdapter());
+        $this->filesystem = new Filesystem(new InMemoryFilesystemAdapter);
     }
 
-    /**
-     * @param  string  $path
-     * @return array
-     */
     public function list(string $path): array
     {
         try {
@@ -52,9 +45,6 @@ class MockClient extends BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
-     * @return string
-     *
      * @throws FilesystemException
      */
     public function download(string $path): string
@@ -63,7 +53,6 @@ class MockClient extends BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
      * @return resource
      *
      * @throws FilesystemException
@@ -73,11 +62,6 @@ class MockClient extends BunnyCDNClient
         return $this->filesystem->readStream($path);
     }
 
-    /**
-     * @param  string  $path
-     * @param $contents
-     * @return array
-     */
     public function upload(string $path, $contents): array
     {
         try {
@@ -97,10 +81,6 @@ class MockClient extends BunnyCDNClient
         return [];
     }
 
-    /**
-     * @param  string  $path
-     * @return array
-     */
     public function make_directory(string $path): array
     {
         try {
@@ -117,9 +97,6 @@ class MockClient extends BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
-     * @return array
-     *
      * @throws FilesystemException
      * @throws BunnyCDNException
      * @throws NotFoundException
@@ -129,7 +106,7 @@ class MockClient extends BunnyCDNClient
         try {
             $this->filesystem->has($path) ?
                 $this->filesystem->deleteDirectory($path) || $this->filesystem->delete($path) :
-                throw new NotFoundException();
+                throw new NotFoundException;
 
             return [
                 'HttpCode' => 200,

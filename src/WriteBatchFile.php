@@ -7,6 +7,5 @@ class WriteBatchFile
     public function __construct(
         public string $localPath,
         public string $targetPath,
-    ) {
-    }
+    ) {}
 }

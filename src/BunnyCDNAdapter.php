@@ -36,19 +36,22 @@ use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
 use RuntimeException;
 use TypeError;
 
-class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumProvider, TemporaryUrlGenerator
+class BunnyCDNAdapter implements ChecksumProvider, FilesystemAdapter, PublicUrlGenerator, TemporaryUrlGenerator
 {
     use CalculateChecksumFromStream;
 
     private string $token_auth_key = '';
 
+    /**
+     * @param  string  $root  Path prefix all operations are scoped to. This is the
+     *                        storage-zone equivalent of the S3 adapter's "root" config.
+     */
     public function __construct(
         private BunnyCDNClient $client,
         private string $pullzone_url = '',
+        private string $root = '',
     ) {
-        if (\func_num_args() > 2 && (string) \func_get_arg(2) !== '') {
-            throw new \RuntimeException('PrefixPath is no longer supported directly. Use PathPrefixedAdapter instead: https://flysystem.thephpleague.com/docs/adapter/path-prefixing/');
-        }
+        $this->root = rtrim(Util::normalizePath($this->root), '/');
     }
 
     /**
@@ -62,11 +65,13 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     }
 
     /**
-     * @param $source
-     * @param $destination
-     * @param  Config  $config
-     * @return void
+     * Prefix a logical (Flysystem-relative) path with the configured root.
      */
+    private function resolvePath(string $path): string
+    {
+        return rtrim(Util::normalizePath($this->root.'/'.$path), '/');
+    }
+
     public function copy($source, $destination, Config $config): void
     {
         try {
@@ -80,15 +85,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         }
     }
 
-    /**
-     * @param $path
-     * @param $contents
-     * @param  Config  $config
-     */
     public function write($path, $contents, Config $config): void
     {
         try {
-            $this->client->upload($path, $contents);
+            $this->client->upload($this->resolvePath($path), $contents);
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToWriteFile::atLocation($path, $e->getMessage());
@@ -96,14 +96,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         // @codeCoverageIgnoreEnd
     }
 
-    /**
-     * @param $path
-     * @return string
-     */
     public function read($path): string
     {
         try {
-            return $this->client->download($path);
+            return $this->client->download($this->resolvePath($path));
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToReadFile::fromLocation($path, $e->getMessage());
@@ -111,15 +107,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         // @codeCoverageIgnoreEnd
     }
 
-    /**
-     * @param  string  $path
-     * @param  bool  $deep
-     * @return iterable
-     */
     public function listContents(string $path, bool $deep): iterable
     {
         try {
-            $entries = $this->client->list($path);
+            $entries = $this->client->list($this->resolvePath($path));
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             throw UnableToRetrieveMetadata::create($path, 'folder', $e->getMessage());
@@ -138,10 +129,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         }
     }
 
-    /**
-     * @param  array  $bunny_file_array
-     * @return StorageAttributes
-     */
     protected function normalizeObject(array $bunny_file_array): StorageAttributes
     {
         $normalised_path = Util::normalizePath(
@@ -152,7 +139,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
             )
         );
 
-        return match ($bunny_file_array['IsDirectory']) {
+        if ($this->root !== '' && str_starts_with($normalised_path, $this->root.'/')) {
+            $normalised_path = substr($normalised_path, strlen($this->root) + 1);
+        }
+
+        return match ((bool) $bunny_file_array['IsDirectory']) {
             true => new DirectoryAttributes(
                 $normalised_path
             ),
@@ -167,10 +158,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         };
     }
 
-    /**
-     * @param  array  $bunny_file_array
-     * @return array
-     */
     private function extractExtraMetadata(array $bunny_file_array): array
     {
         return [
@@ -191,14 +178,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 
     /**
      * Detects the mime type from the provided file path
-     *
-     * @param  string  $path
-     * @return string
      */
     public function detectMimeType(string $path): string
     {
         try {
-            $detector = new FinfoMimeTypeDetector();
+            $detector = new FinfoMimeTypeDetector;
             $mimeType = $detector->detectMimeTypeFromPath($path);
 
             if (! $mimeType) {
@@ -211,12 +195,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         }
     }
 
-    /**
-     * @param $path
-     * @param $contents
-     * @param  Config  $config
-     * @return void
-     */
     public function writeStream($path, $contents, Config $config): void
     {
         $this->write($path, $contents, $config);
@@ -224,25 +202,31 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 
     /**
      * @param  WriteBatchFile[]  $writeBatches
-     * @param  Config  $config
-     * @return void
      */
     public function writeBatch(array $writeBatches, Config $config): void
     {
         $concurrency = (int) $config->get('concurrency', 50);
 
         foreach (\array_chunk($writeBatches, $concurrency) as $batch) {
-            $requests = function () use ($batch) {
-                /** @var WriteBatchFile $file */
-                foreach ($batch as $file) {
-                    yield $this->client->getUploadRequest($file->targetPath, \file_get_contents($file->localPath));
+            $paths = \array_map(
+                fn (WriteBatchFile $file) => $this->resolvePath($file->targetPath),
+                $batch
+            );
+            $logicalPaths = \array_map(
+                fn (WriteBatchFile $file) => $file->targetPath,
+                $batch
+            );
+
+            $requests = function () use ($batch, $paths) {
+                foreach ($paths as $index => $path) {
+                    yield $this->client->getUploadRequest($path, \file_get_contents($batch[$index]->localPath));
                 }
             };
 
             $pool = new Pool($this->client->guzzleClient, $requests(), [
                 'concurrency' => $concurrency,
-                'rejected' => function (RequestException|RuntimeException $reason, int $index) {
-                    throw UnableToWriteFile::atLocation($index, $reason->getMessage());
+                'rejected' => function (RequestException|RuntimeException $reason, int $index) use ($logicalPaths) {
+                    throw UnableToWriteFile::atLocation($logicalPaths[$index] ?? (string) $index, $reason->getMessage());
                 },
             ]);
 
@@ -251,7 +235,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     }
 
     /**
-     * @param $path
      * @return resource
      *
      * @throws UnableToReadFile
@@ -259,9 +242,9 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function readStream($path)
     {
         try {
-            return $this->client->stream($path);
+            return $this->client->stream($this->resolvePath($path));
             // @codeCoverageIgnoreStart
-        } catch (Exceptions\BunnyCDNException|Exceptions\NotFoundException $e) {
+        } catch (Exceptions\BunnyCDNException|NotFoundException $e) {
             throw UnableToReadFile::fromLocation($path, $e->getMessage());
         }
         // @codeCoverageIgnoreEnd
@@ -273,9 +256,15 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
      */
     public function deleteDirectory(string $path): void
     {
+        $resolvedPath = $this->resolvePath($path);
+
+        if ($resolvedPath === '') {
+            throw UnableToDeleteDirectory::atLocation($path, 'Deletion of the storage zone root is not allowed.');
+        }
+
         try {
             $this->client->delete(
-                rtrim($path, '/').'/'
+                rtrim($resolvedPath, '/').'/'
             );
             // @codeCoverageIgnoreStart
         } catch (NotFoundException) {
@@ -293,7 +282,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     public function createDirectory(string $path, Config $config): void
     {
         try {
-            $this->client->make_directory($path);
+            $this->client->make_directory($this->resolvePath($path));
             // @codeCoverageIgnoreStart
         } catch (Exceptions\BunnyCDNException $e) {
             // Lol apparently this is "idempotent" but there's an exception... Sure whatever..
@@ -327,9 +316,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     }
 
     /**
-     * @param  string  $path
-     * @return FileAttributes
-     *
      * @codeCoverageIgnore
      */
     public function mimeType(string $path): FileAttributes
@@ -338,7 +324,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
             $object = $this->getObject($path);
 
             if ($object instanceof DirectoryAttributes) {
-                throw new TypeError();
+                throw new TypeError;
             }
 
             /** @var FileAttributes $object */
@@ -366,10 +352,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         }
     }
 
-    /**
-     * @param  string  $path
-     * @return mixed
-     */
     protected function getObject(string $path = ''): StorageAttributes
     {
         $directory = pathinfo($path, PATHINFO_DIRNAME);
@@ -391,34 +373,34 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         throw UnableToReadFile::fromLocation($path, 'Error 404:"'.$path.'"');
     }
 
-    /**
-     * @param  string  $path
-     * @return FileAttributes
-     */
     public function lastModified(string $path): FileAttributes
     {
         try {
-            return $this->getObject($path);
+            $object = $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError) {
+        }
+
+        if (! $object instanceof FileAttributes) {
             throw new UnableToRetrieveMetadata('Last Modified only accepts files as parameters, not directories');
         }
+
+        return $object;
     }
 
-    /**
-     * @param  string  $path
-     * @return FileAttributes
-     */
     public function fileSize(string $path): FileAttributes
     {
         try {
-            return $this->getObject($path);
+            $object = $this->getObject($path);
         } catch (UnableToReadFile $e) {
             throw new UnableToRetrieveMetadata($e->getMessage());
-        } catch (TypeError) {
+        }
+
+        if (! $object instanceof FileAttributes) {
             throw new UnableToRetrieveMetadata('Cannot retrieve size of folder');
         }
+
+        return $object;
     }
 
     /**
@@ -476,10 +458,6 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         $this->write($destination, $this->read($source), $config);
     }
 
-    /**
-     * @param $path
-     * @return void
-     */
     public function delete($path): void
     {
         // if path is empty or ends with /, it's a directory.
@@ -488,7 +466,7 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         }
 
         try {
-            $this->client->delete($path);
+            $this->client->delete($this->resolvePath($path));
             // @codeCoverageIgnoreStart
         } catch (NotFoundException) {
             // nth
@@ -506,20 +484,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         return $this->exists(StorageAttributes::TYPE_DIRECTORY, $path);
     }
 
-    /**
-     * @param  string  $path
-     * @return bool
-     */
     public function fileExists(string $path): bool
     {
         return $this->exists(StorageAttributes::TYPE_FILE, $path);
     }
 
-    /**
-     * @param  string  $path
-     * @param  Config  $config
-     * @return string
-     */
     public function checksum(string $path, Config $config): string
     {
         // for compatibility reasons, the default checksum algorithm is md5
@@ -547,28 +516,22 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
     /**
      * @deprecated use publicUrl instead
      *
-     * @param  string  $path
-     * @return string
      * @codeCoverageIgnore
+     *
      * @noinspection PhpUnused
      */
     public function getUrl(string $path): string
     {
-        return $this->publicUrl($path, new Config());
+        return $this->publicUrl($path, new Config);
     }
 
-    /**
-     * @param  string  $path
-     * @param  Config  $config
-     * @return string
-     */
     public function publicUrl(string $path, Config $config): string
     {
         if ($this->pullzone_url === '') {
             throw new RuntimeException('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         }
 
-        return rtrim($this->pullzone_url, '/').'/'.ltrim($path, '/');
+        return rtrim($this->pullzone_url, '/').'/'.ltrim($this->resolvePath($path), '/');
     }
 
     public function temporaryUrl(string $path, DateTimeInterface $expiresAt, Config $config): string
@@ -583,6 +546,11 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
         // extract elements from our path
         $parts = parse_url($path);
         $path = str_starts_with($parts['path'], '/') ? $path : '/'.$path;
+
+        // scope the URL to the configured root, unless a fully qualified URL was passed
+        if ($this->root !== '' && ! filter_var($path, FILTER_VALIDATE_URL)) {
+            $path = '/'.$this->root.$path;
+        }
 
         // extract our query params
         parse_str($parts['query'] ?? '', $params);
@@ -602,6 +570,25 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
             .($params ? '&'.http_build_query($params) : null);
     }
 
+    /**
+     * Laravel-compatible temporary URL generation.
+     *
+     * Laravel's FilesystemAdapter only calls this method if the underlying
+     * adapter implements it, so `Storage::disk('bunnycdn')->temporaryUrl()`
+     * will now work out of the box.
+     *
+     * @param  DateTimeInterface|int  $expiration  DateTime instance, or minutes from now
+     * @param  array<string, mixed>  $options  Additional query parameters to sign into the URL
+     */
+    public function getTemporaryUrl(string $path, DateTimeInterface|int $expiration, array $options = []): string
+    {
+        $expiresAt = $expiration instanceof DateTimeInterface
+            ? $expiration
+            : (new \DateTimeImmutable('now'))->modify('+'.(int) $expiration.' minutes');
+
+        return $this->temporaryUrl($path, $expiresAt, new Config($options === [] ? [] : ['withQueryParams' => $options]));
+    }
+
     private function buildSigningKey($path, int $expiration, array $params): string
     {
         // process our query params
@@ -617,7 +604,10 @@ class BunnyCDNAdapter implements FilesystemAdapter, PublicUrlGenerator, Checksum
 
     private static function parse_bunny_timestamp(string $timestamp): int
     {
-        return (date_create_from_format('Y-m-d\TH:i:s.u', $timestamp) ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp))->getTimestamp();
+        $date = date_create_from_format('Y-m-d\TH:i:s.u', $timestamp)
+            ?: date_create_from_format('Y-m-d\TH:i:s', $timestamp);
+
+        return $date ? $date->getTimestamp() : 0;
     }
 
     private function exists(string $type, string $path): bool

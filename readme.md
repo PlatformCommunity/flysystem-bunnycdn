@@ -1,7 +1,7 @@
 <img alt="Bunny CDN Logo" src="https://gist.githubusercontent.com/sifex/bb1ebae00c4c9a827a55a2b973fef0e7/raw/d79dab1b6959f580a3b7a2e6238dae7445203f2a/bunnycdn_logo.svg?sanitize=true" width="300" />
 
 # Flysystem Adapter for BunnyCDN Storage
-[![Build Status - Flysystem v2](https://img.shields.io/github/actions/workflow/status/PlatformCommunity/flysystem-bunnycdn/php.yml?branch=v2&label=Flysystem%20v2)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v3](https://img.shields.io/github/actions/workflow/status/PlatformCommunity/flysystem-bunnycdn/php.yml?branch=v3&label=Flysystem%20v3)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) <br />[![Codecov](https://img.shields.io/codecov/c/github/PlatformCommunity/flysystem-bunnycdn)](https://codecov.io/gh/PlatformCommunity/flysystem-bunnycdn) [![Packagist Version](https://img.shields.io/packagist/v/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn) ![Minimum PHP Version: 7.4](https://img.shields.io/badge/php-min%207.4-important) [![Licence: MIT](https://img.shields.io/packagist/l/platformcommunity/flysystem-bunnycdn)](https://github.com/PlatformCommunity/flysystem-bunnycdn/blob/master/LICENSE) [![Downloads](https://img.shields.io/packagist/dm/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn)
+[![Build Status - Flysystem v2](https://img.shields.io/github/actions/workflow/status/PlatformCommunity/flysystem-bunnycdn/php.yml?branch=v2&label=Flysystem%20v2)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) [![Build Status - Flysystem v3](https://img.shields.io/github/actions/workflow/status/PlatformCommunity/flysystem-bunnycdn/php.yml?branch=v3&label=Flysystem%20v3)](https://github.com/PlatformCommunity/flysystem-bunnycdn/actions) <br />[![Codecov](https://img.shields.io/codecov/c/github/PlatformCommunity/flysystem-bunnycdn)](https://codecov.io/gh/PlatformCommunity/flysystem-bunnycdn) [![Packagist Version](https://img.shields.io/packagist/v/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn) ![Minimum PHP Version: 8.3](https://img.shields.io/badge/php-min%208.3-important) [![Licence: MIT](https://img.shields.io/packagist/l/platformcommunity/flysystem-bunnycdn)](https://github.com/PlatformCommunity/flysystem-bunnycdn/blob/master/LICENSE) [![Downloads](https://img.shields.io/packagist/dm/platformcommunity/flysystem-bunnycdn)](https://packagist.org/packages/platformcommunity/flysystem-bunnycdn)
 
 
 ## Installation
@@ -33,6 +33,24 @@ $adapter->setTokenAuthKey('token-auth-signing-key');
 
 $filesystem = new Filesystem($adapter);
 ```
+
+### Usage with a Root Path
+
+All paths are relative to the adapter root. Pass an optional root path as the third constructor argument to scope every operation (upload, read, list, delete, URLs) to a subdirectory of the storage zone:
+
+```php
+$adapter = new BunnyCDNAdapter(
+    new BunnyCDNClient(
+        'storage-zone',
+        'api-key',
+        BunnyCDNRegion::FALKENSTEIN
+    ),
+    'https://testing.b-cdn.net', # Pull Zone URL
+    'assets'                     # Root path — optional
+);
+```
+
+Files are then stored at `assets/...` inside the storage zone, listed paths are returned relative to the root, and generated URLs point at `https://testing.b-cdn.net/assets/...`.
 
 ### Usage with Pull Zones
 
@@ -84,11 +102,12 @@ Next, install the adapter to your `AppServiceProvider` to give Laravel's FileSys
                     $config['api_key'],
                     $config['region']
                 ),
-                $config['pull_zone']
+                $config['pull_zone'] ?? '',
+                $config['root'] ?? '' // optional root path, scopes all operations to a subdirectory
             );
             
             // for temporary URL support, define a signing key
-            $adapter->setTokenAuthKey('token-auth-signing-key');
+            $adapter->setTokenAuthKey($config['token_auth_key'] ?? '');
 
             return new FilesystemAdapter(
                 new Filesystem($adapter, $config),
@@ -110,6 +129,7 @@ Finally, add the `bunnycdn` driver into your `config/filesystems.php` configurat
             'pull_zone' => env('BUNNYCDN_PULL_ZONE'),
             'api_key' => env('BUNNYCDN_API_KEY'),
             'token_auth_key' => env('BUNNYCDN_TOKEN_AUTH_KEY', ''), // optional if you'd like signed URLs
+            'root' => env('BUNNYCDN_ROOT', ''), // optional root path
             'region' => env('BUNNYCDN_REGION', \PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion::DEFAULT)
         ],
         
@@ -123,6 +143,7 @@ BUNNYCDN_STORAGE_ZONE=testing_storage_zone
 BUNNYCDN_PULL_ZONE=https://testing.b-cdn.net
 BUNNYCDN_API_KEY="api-key"
 # BUNNYCDN_REGION=uk
+# BUNNYCDN_ROOT=assets (optional root path)
 #BUNNYCDN_TOKEN_AUTH_KEY="your-token-auth-key" (optional, under CDN > Security > Token Authentication)
 ```
 
@@ -132,6 +153,18 @@ After that, you can use the `bunnycdn` disk in Laravel 9.
 Storage::disk('bunnycdn')->put('index.html', '<html>Hello World</html>');
 
 return response(Storage::disk('bunnycdn')->get('index.html'));
+```
+
+With a `token_auth_key` configured, signed temporary URLs work through Laravel's native API:
+
+```php
+$url = Storage::disk('bunnycdn')->temporaryUrl('path/to/file.pdf', now()->addHour());
+```
+
+`temporaryUrl()` also accepts an integer expiration in minutes, and additional query parameters that are signed into the URL:
+
+```php
+$url = Storage::disk('bunnycdn')->temporaryUrl('path/to/file.pdf', 60, ['download' => 'file.pdf']);
 ```
 
 _Note: You may have to run `php artisan config:clear` in order for your configuration to be refreshed if your app is running with a config cache driver / production mode._
