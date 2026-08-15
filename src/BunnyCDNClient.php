@@ -46,7 +46,7 @@ class BunnyCDNClient
     {
         return new Request(
             $method,
-            self::get_base_url($this->region).Util::normalizePath('/'.$this->storage_zone_name.'/').$path,
+            self::get_base_url($this->region).Util::normalizePath('/'.$this->storage_zone_name.'/'.$path),
             array_merge([
                 'Accept' => '*/*',
                 'AccessKey' => $this->api_key,
