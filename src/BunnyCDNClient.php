@@ -20,7 +20,7 @@ class BunnyCDNClient
         private string $api_key,
         private string $region = BunnyCDNRegion::FALKENSTEIN
     ) {
-        $handler = HandlerStack::create(new CurlHandler());
+        $handler = HandlerStack::create(new CurlHandler);
 
         $this->guzzleClient = new Guzzle([
             'handler' => $handler,
@@ -56,19 +56,21 @@ class BunnyCDNClient
     }
 
     /**
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>|string
+     *
      * @throws ClientExceptionInterface
      */
     private function request(Request $request, array $options = []): mixed
     {
         $contents = $this->guzzleClient->send($request, $options)->getBody()->getContents();
 
-        return json_decode($contents, true) ?? $contents;
+        $decoded = json_decode($contents, true);
+
+        return \is_array($decoded) ? $decoded : $contents;
     }
 
     /**
-     * @param  string  $path
-     * @return array
-     *
      * @throws NotFoundException|BunnyCDNException
      */
     public function list(string $path): array
@@ -95,9 +97,6 @@ class BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
-     * @return mixed
-     *
      * @throws BunnyCDNException
      * @throws NotFoundException
      */
@@ -122,7 +121,6 @@ class BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
      * @return resource|null
      *
      * @throws BunnyCDNException
@@ -159,10 +157,6 @@ class BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
-     * @param $contents
-     * @return mixed
-     *
      * @throws BunnyCDNException
      */
     public function upload(string $path, $contents): mixed
@@ -181,9 +175,6 @@ class BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
-     * @return mixed
-     *
      * @throws BunnyCDNException
      */
     public function make_directory(string $path): mixed
@@ -203,9 +194,6 @@ class BunnyCDNClient
     }
 
     /**
-     * @param  string  $path
-     * @return mixed
-     *
      * @throws NotFoundException
      * @throws BunnyCDNException
      */

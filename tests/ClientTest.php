@@ -2,12 +2,13 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
-use function PHPUnit\Framework\assertEmpty;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\BunnyCDNException;
 use PlatformCommunity\Flysystem\BunnyCDN\Exceptions\NotFoundException;
+
+use function PHPUnit\Framework\assertEmpty;
 
 if (\is_file(__DIR__.'/ClientDI.php')) {
     require_once __DIR__.'/ClientDI.php';

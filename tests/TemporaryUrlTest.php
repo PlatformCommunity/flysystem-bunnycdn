@@ -19,7 +19,7 @@ class TemporaryUrlTest extends TestCase
         $adapter = new BunnyCDNAdapter($client, 'pz-key');
 
         $expiresAt = new \DateTimeImmutable('+1 hour');
-        $adapter->temporaryUrl('testing.text', $expiresAt, new Config());
+        $adapter->temporaryUrl('testing.text', $expiresAt, new Config);
     }
 
     public function test_it_can_generate_signing_key()
@@ -29,7 +29,7 @@ class TemporaryUrlTest extends TestCase
         $adapter->setTokenAuthKey('test-auth-key');
 
         $expiresAt = new \DateTimeImmutable('+1 hour');
-        $url = $adapter->temporaryUrl('testing.txt', $expiresAt, new Config());
+        $url = $adapter->temporaryUrl('testing.txt', $expiresAt, new Config);
 
         $this->assertStringContainsString('https://pz-url.co.uk/testing.txt?token=', $url);
         $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
@@ -51,5 +51,62 @@ class TemporaryUrlTest extends TestCase
         $this->assertStringContainsString('https://pz-url.co.uk/testing.txt?token=', $url);
         $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
         $this->assertStringContainsString('testParam=testValue', $url);
+    }
+
+    public function test_it_can_generate_temporary_url_via_laravel_compatible_method(): void
+    {
+        $client = new BunnyCDNClient('test', 'test');
+        $adapter = new BunnyCDNAdapter($client, 'https://pz-url.co.uk');
+        $adapter->setTokenAuthKey('test-auth-key');
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $adapter->getTemporaryUrl('testing.txt', $expiresAt, []);
+
+        $this->assertSame(
+            $adapter->temporaryUrl('testing.txt', $expiresAt, new Config),
+            $url
+        );
+    }
+
+    public function test_it_can_generate_temporary_url_with_minutes_as_expiration(): void
+    {
+        $client = new BunnyCDNClient('test', 'test');
+        $adapter = new BunnyCDNAdapter($client, 'https://pz-url.co.uk');
+        $adapter->setTokenAuthKey('test-auth-key');
+
+        $expiresIn = 60;
+        $url = $adapter->getTemporaryUrl('testing.txt', $expiresIn, []);
+
+        $this->assertStringContainsString('https://pz-url.co.uk/testing.txt?token=', $url);
+        $this->assertStringContainsString('expires='.(time() + ($expiresIn * 60)), $url);
+    }
+
+    public function test_it_can_generate_temporary_url_with_options_as_query_params(): void
+    {
+        $client = new BunnyCDNClient('test', 'test');
+        $adapter = new BunnyCDNAdapter($client, 'https://pz-url.co.uk');
+        $adapter->setTokenAuthKey('test-auth-key');
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $adapter->getTemporaryUrl('testing.txt', $expiresAt, [
+            'testParam' => 'testValue',
+        ]);
+
+        $this->assertStringContainsString('https://pz-url.co.uk/testing.txt?token=', $url);
+        $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
+        $this->assertStringContainsString('testParam=testValue', $url);
+    }
+
+    public function test_temporary_url_with_root_scopes_the_signed_path(): void
+    {
+        $client = new BunnyCDNClient('test', 'test');
+        $adapter = new BunnyCDNAdapter($client, 'https://pz-url.co.uk', 'assets');
+        $adapter->setTokenAuthKey('test-auth-key');
+
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+        $url = $adapter->temporaryUrl('testing.txt', $expiresAt, new Config);
+
+        $this->assertStringContainsString('https://pz-url.co.uk/assets/testing.txt?token=', $url);
+        $this->assertStringContainsString('expires='.$expiresAt->getTimestamp(), $url);
     }
 }

@@ -18,6 +18,7 @@ use League\Flysystem\UnableToProvideChecksum;
 use League\Flysystem\UnableToRetrieveMetadata;
 use League\Flysystem\UnableToWriteFile;
 use League\Flysystem\Visibility;
+use PHPUnit\Framework\Attributes\Test;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
@@ -105,39 +106,33 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         $this->markTestSkipped('No visibility support is provided for BunnyCDN');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function file_exists_on_directory_is_false(): void
     {
         $this->runScenario(function () {
             $adapter = $this->adapter();
 
             $this->assertFalse($adapter->directoryExists('test'));
-            $adapter->createDirectory('test', new Config());
+            $adapter->createDirectory('test', new Config);
             $this->assertTrue($adapter->directoryExists('test'));
             $this->assertFalse($adapter->fileExists('test'));
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function directory_exists_on_file_is_false(): void
     {
         $this->runScenario(function () {
             $adapter = $this->adapter();
 
             $this->assertFalse($adapter->fileExists('test.txt'));
-            $adapter->write('test.txt', 'aaa', new Config());
+            $adapter->write('test.txt', 'aaa', new Config);
             $this->assertTrue($adapter->fileExists('test.txt'));
             $this->assertFalse($adapter->directoryExists('test.txt'));
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function delete_on_directory_throws_exception(): void
     {
         $this->runScenario(function () {
@@ -154,9 +149,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function delete_with_empty_path_throws_exception(): void
     {
         $this->runScenario(function () {
@@ -173,9 +166,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function moving_a_folder(): void
     {
         $this->runScenario(function () {
@@ -190,7 +181,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
                 'contents to be copied',
                 new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
             );
-            $adapter->move('test', 'destination', new Config());
+            $adapter->move('test', 'destination', new Config);
             $this->assertFalse(
                 $adapter->fileExists('test/text.txt'),
                 'After moving a file should no longer exist in the original location.'
@@ -212,22 +203,18 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function moving_a_not_existing_folder(): void
     {
         $this->runScenario(function () {
             $adapter = $this->adapter();
 
             $this->expectException(UnableToMoveFile::class);
-            $adapter->move('not_existing_file', 'destination', new Config());
+            $adapter->move('not_existing_file', 'destination', new Config);
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function copying_a_folder(): void
     {
         $this->runScenario(function () {
@@ -242,7 +229,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
                 'contents to be copied',
                 new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
             );
-            $adapter->copy('test', 'destination', new Config());
+            $adapter->copy('test', 'destination', new Config);
             $this->assertTrue(
                 $adapter->fileExists('test/text.txt'),
                 'After copying a file should exist in the original location.'
@@ -264,24 +251,21 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function copying_a_not_existing_folder(): void
     {
         $this->runScenario(function () {
             $adapter = $this->adapter();
 
             $this->expectException(UnableToCopyFile::class);
-            $adapter->copy('not_existing_file', 'destination', new Config());
+            $adapter->copy('not_existing_file', 'destination', new Config);
         });
     }
 
     /**
      * We overwrite the test, because the original tries accessing the url
-     *
-     * @test
      */
+    #[Test]
     public function generating_a_public_url(): void
     {
         if (self::$isLive && ! \str_starts_with(static::$publicUrl, self::DEMOURL)) {
@@ -290,7 +274,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
             return;
         }
 
-        $url = $this->adapter()->publicUrl('/path.txt', new Config());
+        $url = $this->adapter()->publicUrl('/path.txt', new Config);
 
         self::assertEquals(static::$publicUrl.'/path.txt', $url);
     }
@@ -300,27 +284,23 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('In order to get a visible URL for a BunnyCDN object, you must pass the "pullzone_url" parameter to the BunnyCDNAdapter.');
         $myAdapter = new BunnyCDNAdapter(static::bunnyCDNClient());
-        $myAdapter->publicUrl('/path.txt', new Config());
+        $myAdapter->publicUrl('/path.txt', new Config);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function generating_a_temporary_url(): void
     {
         $adapter = new BunnyCDNAdapter(self::bunnyCDNClient(), '');
         $adapter->setTokenAuthKey('test-key');
 
         $expiresAt = new \DateTimeImmutable('+1 hour');
-        $url = $adapter->temporaryUrl('path.txt', $expiresAt, new Config());
+        $url = $adapter->temporaryUrl('path.txt', $expiresAt, new Config);
 
         $this->assertStringContainsString('path.txt?token=', $url);
         $this->assertStringContainsString('&expires=', $url);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function overwriting_a_file(): void
     {
         $this->runScenario(function () {
@@ -336,9 +316,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function writing_a_file_using_a_stream(): void
     {
         $this->runScenario(function () {
@@ -348,7 +326,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
             fwrite($stream, 'contents');
             rewind($stream);
 
-            $adapter->writeStream('path.txt', $stream, new Config());
+            $adapter->writeStream('path.txt', $stream, new Config);
 
             $this->assertTrue($adapter->fileExists('path.txt'));
             $this->assertEquals('contents', $adapter->read('path.txt'));
@@ -358,9 +336,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function moving_a_file_to_same_destination(): void
     {
         $this->runScenario(function () {
@@ -370,7 +346,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
                 'contents to be copied',
                 new Config([Config::OPTION_VISIBILITY => Visibility::PUBLIC])
             );
-            $adapter->move('source.txt', 'source.txt', new Config());
+            $adapter->move('source.txt', 'source.txt', new Config);
             $this->assertTrue(
                 $adapter->fileExists('source.txt'),
                 'After moving a file to the same location the file should exist.'
@@ -378,18 +354,16 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function get_checksum(): void
     {
         $adapter = $this->adapter();
 
-        $adapter->write('path.txt', 'foobar', new Config());
+        $adapter->write('path.txt', 'foobar', new Config);
 
         $this->assertSame(
             '3858f62230ac3c915f300c664312c63f',
-            $adapter->checksum('path.txt', new Config())
+            $adapter->checksum('path.txt', new Config)
         );
 
         $this->assertSame(
@@ -406,7 +380,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         $adapter->checksum('path.txt', new Config(['checksum_algo' => 'sha256']));
     }
 
-    //test_checksum_throws_error_with_empty_checksum_from_client
+    // test_checksum_throws_error_with_empty_checksum_from_client
     public function test_checksum_throws_error_with_empty_checksum_from_client(): void
     {
         $client = $this->createMock(BunnyCDNClient::class);
@@ -444,9 +418,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
         $adapter->checksum('file.txt', new Config(['checksum_algo' => 'sha256']));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function fetching_the_mime_type_of_an_svg_file_by_file_name(): void
     {
         $this->runScenario(function () {
@@ -454,7 +426,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
             $adapter->write(
                 'source.svg',
                 '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>',
-                new Config()
+                new Config
             );
 
             $this->assertSame(
@@ -568,7 +540,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
                     new WriteBatchFile($firstTmpPath, 'destination.txt'),
                     new WriteBatchFile($secondTmpPath, 'destination2.txt'),
                 ],
-                new Config()
+                new Config
             );
 
             \fclose($firstTmpFile);
@@ -602,7 +574,7 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
                     new WriteBatchFile($firstTmpPath, 'failing.txt'),
                     new WriteBatchFile($secondTmpPath, 'failing2.txt'),
                 ],
-                new Config()
+                new Config
             );
 
             \fclose($firstTmpFile);

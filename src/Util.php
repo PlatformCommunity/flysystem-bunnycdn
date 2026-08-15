@@ -9,9 +9,6 @@ class Util
 {
     /**
      * Splits a path into a file and a directory
-     *
-     * @param $path
-     * @return array
      */
     public static function splitPathIntoDirectoryAndFile($path): array
     {
@@ -27,7 +24,6 @@ class Util
     }
 
     /**
-     * @param $path
      * @param  bool  $isDirectory
      * @return false|string|string[]
      */
@@ -54,21 +50,12 @@ class Util
 
     /**
      * @codeCoverageIgnore
-     *
-     * @param $haystack
-     * @param $needle
-     * @return bool
      */
     public static function startsWith($haystack, $needle): bool
     {
         return strpos($haystack, $needle) === 0;
     }
 
-    /**
-     * @param $haystack
-     * @param $needle
-     * @return bool
-     */
     public static function endsWith($haystack, $needle): bool
     {
         $length = strlen($needle);
