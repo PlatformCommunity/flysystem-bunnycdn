@@ -14,10 +14,10 @@ jobs:
         php-versions: [ '8.3', '8.4', '8.5', ]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Setup PHP with PCOV
-      uses: shivammathur/setup-php@v4
+      uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php-versions }}
         coverage: pcov
@@ -27,7 +27,7 @@ jobs:
 
     - name: Cache Composer packages
       id: composer-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -47,7 +47,7 @@ jobs:
       run: test -f vendor/bin/phpstan && vendor/bin/phpstan analyse --no-progress || echo 'phpstan not installed, skipping'
 
     - name: Upload to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
