@@ -12,6 +12,7 @@ use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\UnableToCopyFile;
+use League\Flysystem\UnableToDeleteDirectory;
 use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToMoveFile;
 use League\Flysystem\UnableToProvideChecksum;
@@ -580,5 +581,48 @@ class FlysystemAdapterTest extends FilesystemAdapterTestCase
             \fclose($firstTmpFile);
             \fclose($secondTmpFile);
         });
+    }
+
+    public function test_delete_directory_on_root_throws_exception(): void
+    {
+        $this->expectException(UnableToDeleteDirectory::class);
+        $adapter = $this->adapter();
+        $adapter->deleteDirectory('');
+    }
+
+    public function test_delete_directory_on_slashed_root_throws_exception(): void
+    {
+        $this->expectException(UnableToDeleteDirectory::class);
+        $adapter = $this->adapter();
+        $adapter->deleteDirectory('/');
+    }
+
+    public function test_last_modified_with_malformed_timestamp_does_not_crash(): void
+    {
+        $client = $this->createMock(BunnyCDNClient::class);
+
+        $client->expects(self::exactly(1))->method('list')->willReturn([
+            [
+                'Guid' => 'guid',
+                'StorageZoneName' => 'test_storage_zone',
+                'Path' => '/test_storage_zone/',
+                'ObjectName' => 'file.txt',
+                'Length' => 10,
+                'LastChanged' => 'not-a-valid-timestamp',
+                'ServerId' => 1,
+                'ArrayNumber' => 0,
+                'IsDirectory' => false,
+                'UserId' => 'user',
+                'ContentType' => '',
+                'DateCreated' => 'not-a-valid-timestamp',
+                'StorageZoneId' => 1,
+                'Checksum' => null,
+                'ReplicatedZones' => '',
+            ],
+        ]);
+
+        $adapter = new BunnyCDNAdapter($client);
+
+        $this->assertSame(0, $adapter->lastModified('file.txt')->lastModified());
     }
 }

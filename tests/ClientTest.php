@@ -2,6 +2,8 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNRegion;
@@ -215,5 +217,45 @@ class ClientTest extends TestCase
         if (is_resource($stream)) {
             fclose($stream);
         }
+    }
+
+    private function clientWithResponseBody(string $body): BunnyCDNClient
+    {
+        $client = new BunnyCDNClient('test_storage_zone', 'api-key');
+        $client->guzzleClient = new Client([
+            'handler' => function () use ($body) {
+                return new Response(200, [], $body);
+            },
+        ]);
+
+        return $client;
+    }
+
+    public function test_download_returns_raw_content_for_numeric_body(): void
+    {
+        $client = $this->clientWithResponseBody('123');
+
+        $this->assertSame('123', $client->download('/file.txt'));
+    }
+
+    public function test_download_returns_raw_content_for_boolean_body(): void
+    {
+        $client = $this->clientWithResponseBody('true');
+
+        $this->assertSame('true', $client->download('/file.txt'));
+    }
+
+    public function test_download_returns_raw_content_for_json_object_body(): void
+    {
+        $client = $this->clientWithResponseBody('{"key":"value"}');
+
+        $this->assertSame('{"key":"value"}', $client->download('/file.txt'));
+    }
+
+    public function test_list_returns_array_for_json_array_body(): void
+    {
+        $client = $this->clientWithResponseBody('[{"ObjectName":"file.txt"}]');
+
+        $this->assertSame([['ObjectName' => 'file.txt']], $client->list('/'));
     }
 }

@@ -2,6 +2,9 @@
 
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use League\Flysystem\AdapterTestUtilities\FilesystemAdapterTestCase;
 use League\Flysystem\Config;
 use League\Flysystem\Filesystem;
@@ -12,6 +15,7 @@ use League\Flysystem\Visibility;
 use PHPUnit\Framework\Attributes\Test;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNAdapter;
 use PlatformCommunity\Flysystem\BunnyCDN\BunnyCDNClient;
+use PlatformCommunity\Flysystem\BunnyCDN\WriteBatchFile;
 
 if (\is_file(__DIR__.'/ClientDI.php')) {
     require_once __DIR__.'/ClientDI.php';
@@ -173,6 +177,49 @@ class RootTest extends FilesystemAdapterTestCase
             $url = $adapter->temporaryUrl('folder/path.txt', new \DateTimeImmutable('+1 hour'), new Config);
             $this->assertStringContainsString(self::ROOT_PATH.'/folder/path.txt?token=', $url);
         });
+    }
+
+    /**
+     * writeBatch must upload to root-scoped paths.
+     */
+    #[Test]
+    public function write_batch_uses_root_scoped_paths(): void
+    {
+        $mockedClient = new MockClient('test_storage_zone', '123');
+        $mockedClient->guzzleClient = new Client([
+            'handler' => function (Request $request) use ($mockedClient) {
+                if ($request->getMethod() !== 'PUT') {
+                    throw new \RuntimeException('Unexpected request: '.$request->getMethod().' '.$request->getUri());
+                }
+
+                $path = \ltrim(\str_replace('/test_storage_zone', '', $request->getUri()->getPath()), '/');
+                $mockedClient->filesystem->write($path, (string) $request->getBody());
+
+                return new Response(200);
+            },
+        ]);
+
+        $adapter = new BunnyCDNAdapter($mockedClient, 'https://example.org.local/assets/', self::ROOT_PATH);
+
+        $firstTmpFile = \tmpfile();
+        fwrite($firstTmpFile, 'text');
+        $secondTmpFile = \tmpfile();
+        fwrite($secondTmpFile, 'text2');
+
+        $adapter->writeBatch(
+            [
+                new WriteBatchFile(stream_get_meta_data($firstTmpFile)['uri'], 'destination.txt'),
+                new WriteBatchFile(stream_get_meta_data($secondTmpFile)['uri'], 'destination2.txt'),
+            ],
+            new Config
+        );
+
+        \fclose($firstTmpFile);
+        \fclose($secondTmpFile);
+
+        $this->assertTrue($adapter->fileExists('destination.txt'));
+        $this->assertSame('text', $adapter->read('destination.txt'));
+        $this->assertSame('text2', $adapter->read('destination2.txt'));
     }
 
     /**
