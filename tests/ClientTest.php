@@ -258,4 +258,23 @@ class ClientTest extends TestCase
 
         $this->assertSame([['ObjectName' => 'file.txt']], $client->list('/'));
     }
+
+    public function test_list_root_request_has_no_double_slash(): void
+    {
+        $capturedUri = null;
+        $client = new BunnyCDNClient('test_storage_zone', 'api-key');
+        $client->guzzleClient = new Client([
+            'handler' => function ($request) use (&$capturedUri) {
+                $capturedUri = (string) $request->getUri();
+
+                return new Response(200, [], '[]');
+            },
+        ]);
+
+        $client->list('');
+        $this->assertSame('https://storage.bunnycdn.com/test_storage_zone/', $capturedUri);
+
+        $client->list('folder');
+        $this->assertSame('https://storage.bunnycdn.com/test_storage_zone/folder/', $capturedUri);
+    }
 }
