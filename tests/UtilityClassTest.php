@@ -3,16 +3,16 @@
 namespace PlatformCommunity\Flysystem\BunnyCDN\Tests;
 
 use Exception;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use PlatformCommunity\Flysystem\BunnyCDN\Util;
 
 class UtilityClassTest extends TestCase
 {
     /**
-     * @test
-     *
      * @throws Exception
      */
+    #[Test]
     public function it_starts_with()
     {
         $this->assertTrue(
@@ -25,10 +25,9 @@ class UtilityClassTest extends TestCase
     }
 
     /**
-     * @test
-     *
      * @throws Exception
      */
+    #[Test]
     public function it_ends_with()
     {
         $this->assertTrue(
@@ -45,10 +44,9 @@ class UtilityClassTest extends TestCase
     }
 
     /**
-     * @test
-     *
      * @throws Exception
      */
+    #[Test]
     public function it_tests_normalize_path()
     {
         $this->assertEquals(
@@ -68,10 +66,9 @@ class UtilityClassTest extends TestCase
     }
 
     /**
-     * @test
-     *
      * @throws Exception
      */
+    #[Test]
     public function it_path_split()
     {
         $this->assertEquals(
