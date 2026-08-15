@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [v3.4.1] - 2026-08-15
+
+### Fixed
+
+- Storage request URLs could contain a double slash for root-level paths (`https://{region}.storage.bunnycdn.com/{zone}//`), which the Bunny API rejects — root listings (e.g. Laravel's `allFiles()`) could come back empty ([#75](https://github.com/PlatformCommunity/flysystem-bunnycdn/issues/75)). Paths are now normalized in a single place, and a regression test asserts the exact request URI.
+
 ## [v3.4.0] - 2026-08-15
 
 ### Added
@@ -60,6 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 For releases prior to v3.3.5, see the [GitHub releases page](https://github.com/PlatformCommunity/flysystem-bunnycdn/releases).
 
+[v3.4.1]: https://github.com/PlatformCommunity/flysystem-bunnycdn/compare/v3.4.0...v3.4.1
 [v3.4.0]: https://github.com/PlatformCommunity/flysystem-bunnycdn/compare/v3.3.10...v3.4.0
 [v3.3.10]: https://github.com/PlatformCommunity/flysystem-bunnycdn/compare/v3.3.8...v3.3.10
 [v3.3.8]: https://github.com/PlatformCommunity/flysystem-bunnycdn/compare/v3.3.6...v3.3.8
