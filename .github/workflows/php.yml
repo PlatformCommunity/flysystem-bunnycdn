@@ -47,7 +47,9 @@ jobs:
       run: test -f vendor/bin/phpstan && vendor/bin/phpstan analyse --no-progress || echo 'phpstan not installed, skipping'
 
     - name: Upload to Codecov
+      if: env.CODECOV_TOKEN != ''
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       uses: codecov/codecov-action@v7
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
